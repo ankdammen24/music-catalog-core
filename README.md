@@ -12,11 +12,12 @@ This is the only active backend repository. API + workers + shared + infra all l
 - `workers/radio-sync-worker` — radio sync skeleton
 - `packages/shared` — shared types/constants
 - `infra/supabase/migrations` — database migrations
-- `docs` — architecture, auth, API, R2 notes
+- `docs` — architecture, auth, API, R2 notes, audio ingest flow
 
 ## Core system model
 - Supabase Postgres = metadata source of truth.
 - Cloudflare R2 = file source of truth.
+- No separate staging bucket is used; staging uploads are key prefixes under `mrq-music-masters`.
 - Clerk = auth provider.
 - Supabase Auth is not used.
 - Database stores R2 object keys, never permanent public URLs.

@@ -5,8 +5,14 @@ import { uploadsService } from '../services/uploads.service.js';
 export async function uploadRoutes(app: FastifyInstance) {
   app.post('/uploads/presign', async (req) => {
     const body = presignSchema.parse(req.body);
-    const objectKey = uploadsService.buildObjectKey(body);
-    return uploadsService.presign(body.bucketType, objectKey, body.contentType);
+    const bucketType = uploadsService.resolveBucketType(body);
+
+    if (['normalized', 'previews'].includes(bucketType) && !['admin', 'service'].includes(req.auth.role)) {
+      throw app.httpErrors.forbidden('Only admin/service can presign normalized/previews uploads');
+    }
+
+    const objectKey = uploadsService.buildObjectKey({ ...body, bucketType });
+    return uploadsService.presign(bucketType, objectKey, body.contentType);
   });
 
   app.post('/uploads/complete', async (req) => {
