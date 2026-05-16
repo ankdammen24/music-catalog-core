@@ -1,6 +1,6 @@
 # music-catalog-core
 
-Unified backend monorepo for Media Rosenqvist catalog products (Radio Core, Music Core, Radio Uppsala, distribution tooling, and future Lovable/admin frontend).
+Unified backend monorepo for Media Rosenqvist catalog products (Radio Core, Music Core, Radio Uppsala, distribution tooling, and integrations with the separate `soundloom-core` frontend repository).
 
 ## Single-repo policy
 This is the only active backend repository. API + workers + shared + infra all live here.
@@ -38,7 +38,7 @@ This is the only active backend repository. API + workers + shared + infra all l
 Run all runtime services:
 - `docker compose up --build`
 
-## How future Lovable frontend should consume this backend
+## How `soundloom-core` frontend should consume this backend
 - Authenticate users with Clerk.
 - Call API endpoints in `apps/api`.
 - Request short-lived signed R2 URLs from API when needed.
