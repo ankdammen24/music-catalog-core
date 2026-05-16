@@ -1,48 +1,69 @@
 # music-catalog-core
 
-Unified backend/API/workers monorepo for Media Rosenqvist catalog products. Frontend lives in separate `soundloom-core` repository.
+Stabil backend/API för Soundloom (`soundloom-core`). Frontend finns i separat repo och ska **endast** prata med detta API.
 
-## Single-repo policy
-This is the only active backend repository. API + workers + shared + infra all live here.
-No frontend application code is maintained in this repository.
+## Vad music-catalog-core är
+- Enda aktiva backend-repot för katalogdata, playback och worker-flöden.
+- Supabase Postgres är source-of-truth för metadata.
+- Cloudflare R2 är source-of-truth för media/artwork/export.
+- Inga permanenta publika fil-URL:er lagras i databasen, endast object keys.
 
-## Monorepo structure
-- `apps/api` — Fastify + TypeScript API (Clerk auth, Supabase metadata, R2 signed URLs)
-- `workers/audio-worker` — audio processing skeleton
-- `workers/distribution-worker` — distribution/export skeleton
-- `workers/radio-sync-worker` — radio sync skeleton
-- `packages/shared` — shared types/constants
-- `infra/supabase/migrations` — database migrations
-- `docs` — architecture, auth, API, R2 notes, audio ingest flow
+## API-endpoints (`/api/v1`)
+- `GET /api/v1/health`
+- `GET /api/v1/releases`
+- `GET /api/v1/artists`
+- `GET /api/v1/tracks`
+- `GET /api/v1/search?q=`
+- `POST /api/v1/playback/token`
 
-## Core system model
-- Supabase Postgres = metadata source of truth.
-- Cloudflare R2 = file source of truth.
-- No separate staging bucket is used; staging uploads are key prefixes under `mrq-music-masters`.
-- Clerk = auth provider.
-- Supabase Auth is not used.
-- Database stores R2 object keys, never permanent public URLs.
+Responsformat:
+- Success: `{ "ok": true, "data": ... }`
+- Error: `{ "ok": false, "error": { "code": "...", "message": "..." } }`
 
-## Environment setup
-1. Copy `.env.example` to `.env`
-2. Fill required values for Supabase, Clerk, and R2
+## Hur soundloom-core kopplar mot API:t
+- `soundloom-core` anropar endast backend-API:t.
+- Ingen direktkoppling från frontend till Supabase eller R2.
+- Playback sker genom kortlivade signed URL:er från `POST /api/v1/playback/token`.
 
-## Local development
-- Install deps: `pnpm install`
-- Run API: `pnpm dev:api`
-- Run workers:
-  - `pnpm dev:audio-worker`
-  - `pnpm dev:distribution-worker`
-  - `pnpm dev:radio-sync-worker`
+## Env setup
+Kopiera `.env.example` till `.env` och fyll i värden.
 
-## Docker local development
-Run all runtime services:
-- `docker compose up --build`
+Viktiga variabler:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `R2_ENDPOINT`
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_NAME=mrq-music-masters`
+- `FRONTEND_ORIGIN` (t.ex. `http://localhost:3000` eller `https://soundloom.mediarosenqvist.com`)
 
-## How `soundloom-core` frontend should consume this backend
-- Authenticate users with Clerk.
-- Call API endpoints in `apps/api`.
-- Request short-lived signed R2 URLs from API when needed.
-- Never use Supabase service-role keys in frontend code.
-- Send `Authorization: Bearer <clerk_token>` to protected API routes.
-- Use `docs/frontend-contract.md` as the integration contract.
+## Lokal körning
+- `npm install`
+- `npm run dev`
+- Kontroll:
+  - `curl http://localhost:3001/api/v1/health`
+  - `curl http://localhost:3001/api/v1/releases`
+  - `curl http://localhost:3001/api/v1/artists`
+  - `curl http://localhost:3001/api/v1/tracks`
+
+## R2 playback flow
+1. Frontend skickar `trackId` till `POST /api/v1/playback/token`.
+2. Backend validerar `trackId`, playable-status och rights-status.
+3. Backend väljer rätt audio object key i R2.
+4. Backend returnerar kortlivad signed URL (15 min).
+
+## Upload/staging-princip
+All staging-upload sker under prefix i samma bucket:
+- `mrq-music-masters/staging/uploads/...`
+
+## Enkel testbar struktur
+- `src/server.ts` (entry)
+- `src/app.ts`
+- `src/config`
+- `src/routes`
+- `src/services`
+- `src/repositories`
+- `src/lib`
+- `src/middleware`
+- `src/types`

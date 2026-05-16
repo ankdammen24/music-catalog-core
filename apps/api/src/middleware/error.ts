@@ -6,6 +6,7 @@ export function registerErrorHandler(app: FastifyInstance) {
     app.log.error(error);
     if (error instanceof ZodError) {
       return reply.code(400).send({
+        ok: false,
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Request validation failed',
@@ -15,6 +16,7 @@ export function registerErrorHandler(app: FastifyInstance) {
     }
 
     return reply.code((error as any).statusCode ?? 500).send({
+      ok: false,
       error: {
         code: (error as any).code ?? 'INTERNAL_ERROR',
         message: error.message,
