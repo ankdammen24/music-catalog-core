@@ -13,8 +13,10 @@ export const presignSchema = z.object({
 
 export const completeSchema = z.object({
   bucketType: bucketTypeSchema,
+  bucket: z.string().optional(),
   entityType: z.enum(['track', 'artist', 'album', 'release']),
   entityId: z.string().uuid(),
   objectKey: z.string().min(1),
+  contentType: z.string().optional(),
   createProcessingJob: z.boolean().optional()
 });

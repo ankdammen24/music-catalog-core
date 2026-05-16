@@ -1,9 +1,10 @@
 # music-catalog-core
 
-Unified backend monorepo for Media Rosenqvist catalog products (Radio Core, Music Core, Radio Uppsala, distribution tooling, and integrations with the separate `soundloom-core` frontend repository).
+Unified backend/API/workers monorepo for Media Rosenqvist catalog products. Frontend lives in separate `soundloom-core` repository.
 
 ## Single-repo policy
 This is the only active backend repository. API + workers + shared + infra all live here.
+No frontend application code is maintained in this repository.
 
 ## Monorepo structure
 - `apps/api` — Fastify + TypeScript API (Clerk auth, Supabase metadata, R2 signed URLs)
@@ -43,3 +44,5 @@ Run all runtime services:
 - Call API endpoints in `apps/api`.
 - Request short-lived signed R2 URLs from API when needed.
 - Never use Supabase service-role keys in frontend code.
+- Send `Authorization: Bearer <clerk_token>` to protected API routes.
+- Use `docs/frontend-contract.md` as the integration contract.

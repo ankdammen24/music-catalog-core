@@ -7,7 +7,19 @@ import { trackCreateSchema, trackUpdateSchema } from '../schemas/track.schema.js
 import { r2, R2_BUCKETS } from '../lib/r2.js';
 
 export async function trackRoutes(app: FastifyInstance) {
-  app.get('/tracks', async () => tracksService.list());
+  app.get('/tracks', async (req) => {
+    const query = z.object({
+      page: z.coerce.number().int().min(1).optional(),
+      pageSize: z.coerce.number().int().min(1).max(100).optional(),
+      status: z.string().optional(),
+      artist_id: z.string().uuid().optional(),
+      album_id: z.string().uuid().optional(),
+      rights_status: z.string().optional(),
+      processing_status: z.string().optional(),
+      search: z.string().min(1).optional()
+    }).parse(req.query);
+    return tracksService.list(query);
+  });
   app.get('/tracks/:id', async (req) => tracksService.get(z.object({ id: z.string().uuid() }).parse(req.params).id));
   app.post('/tracks', async (req) => tracksService.create(trackCreateSchema.parse(req.body)));
   app.patch('/tracks/:id', async (req) => tracksService.update(z.object({ id: z.string().uuid() }).parse(req.params).id, trackUpdateSchema.parse(req.body)));
