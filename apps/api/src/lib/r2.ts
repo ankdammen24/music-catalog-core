@@ -11,10 +11,10 @@ export const r2 = new S3Client({
 });
 
 export const R2_BUCKETS = {
-  staging: env.R2_BUCKET_MASTERS,
-  masters: env.R2_BUCKET_MASTERS,
-  previews: env.R2_BUCKET_PREVIEWS,
-  normalized: env.R2_BUCKET_NORMALIZED,
-  artwork: env.R2_BUCKET_ARTWORK,
-  exports: env.R2_BUCKET_EXPORTS
+  staging: env.R2_BUCKET_NAME,
+  masters: env.R2_BUCKET_NAME,
+  previews: env.R2_BUCKET_NAME,
+  normalized: env.R2_BUCKET_NAME,
+  artwork: env.R2_BUCKET_NAME,
+  exports: env.R2_BUCKET_NAME
 } as const;

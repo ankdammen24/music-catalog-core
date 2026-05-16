@@ -12,6 +12,7 @@ import { trackRoutes } from './routes/tracks.routes.js';
 import { releaseRoutes } from './routes/releases.routes.js';
 import { playlistRoutes } from './routes/playlists.routes.js';
 import { uploadRoutes } from './routes/uploads.routes.js';
+import { catalogRoutes } from './routes/catalog.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -30,6 +31,7 @@ export async function buildApp() {
   await app.register(releaseRoutes);
   await app.register(playlistRoutes);
   await app.register(uploadRoutes);
+  await app.register(catalogRoutes, { prefix: '/api/v1' });
   registerErrorHandler(app);
   return app;
 }
