@@ -1,69 +1,93 @@
-# music-catalog-core
+# music-catalog-core monorepo
 
-Stabil backend/API för Soundloom (`soundloom-core`). Frontend finns i separat repo och ska **endast** prata med detta API.
+Detta repo är nu ett gemensamt deploybart monorepo för backend + frontend.
 
-## Vad music-catalog-core är
-- Enda aktiva backend-repot för katalogdata, playback och worker-flöden.
-- Supabase Postgres är source-of-truth för metadata.
-- Cloudflare R2 är source-of-truth för media/artwork/export.
-- Inga permanenta publika fil-URL:er lagras i databasen, endast object keys.
+## Struktur
 
-## API-endpoints (`/api/v1`)
-- `GET /api/v1/health`
-- `GET /api/v1/releases`
-- `GET /api/v1/artists`
-- `GET /api/v1/tracks`
-- `GET /api/v1/search?q=`
-- `POST /api/v1/playback/token`
+```txt
+apps/
+  api/        # backend (äger DB, R2, upload, playback-token, rights)
+  web/        # soundloom frontend
+packages/
+  shared/     # delade TypeScript-typer
+infra/
+  docker/
+  kubernetes/
+    base/
+    overlays/
+      local/
+      staging/
+      production/
+```
 
-Responsformat:
-- Success: `{ "ok": true, "data": ... }`
-- Error: `{ "ok": false, "error": { "code": "...", "message": "..." } }`
+## Arkitekturgränser
+- `apps/web` pratar med backend via `/api` proxy.
+- `apps/web` pratar **inte** direkt med Supabase eller R2.
+- `apps/api` är enda tjänsten som pratar med Supabase och R2.
+- Bucket för media/upload: `mrq-music-masters`.
+- Upload-prefix för staging: `staging/uploads/`.
 
-## Hur soundloom-core kopplar mot API:t
-- `soundloom-core` anropar endast backend-API:t.
-- Ingen direktkoppling från frontend till Supabase eller R2.
-- Playback sker genom kortlivade signed URL:er från `POST /api/v1/playback/token`.
+## Lokalt (utan Docker)
+1. `npm install`
+2. Kopiera env-filer:
+   - `cp apps/api/.env.example apps/api/.env`
+   - `cp apps/web/.env.example apps/web/.env.local`
+3. Kör allt:
+   - `npm run dev`
 
-## Env setup
-Kopiera `.env.example` till `.env` och fyll i värden.
+Separat:
+- `npm run dev:api`
+- `npm run dev:web`
 
-Viktiga variabler:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `R2_ENDPOINT`
-- `R2_ACCOUNT_ID`
-- `R2_ACCESS_KEY_ID`
-- `R2_SECRET_ACCESS_KEY`
-- `R2_BUCKET_NAME=mrq-music-masters`
-- `FRONTEND_ORIGIN` (t.ex. `http://localhost:3000` eller `https://soundloom.mediarosenqvist.com`)
+Build/lint:
+- `npm run build`
+- `npm run build:api`
+- `npm run build:web`
+- `npm run lint`
 
-## Lokal körning
-- `npm install`
-- `npm run dev`
-- Kontroll:
-  - `curl http://localhost:3001/api/v1/health`
-  - `curl http://localhost:3001/api/v1/releases`
-  - `curl http://localhost:3001/api/v1/artists`
-  - `curl http://localhost:3001/api/v1/tracks`
+## Docker Compose
+- `docker compose up --build`
+- API: `http://localhost:3001`
+- Web: `http://localhost:3000`
 
-## R2 playback flow
-1. Frontend skickar `trackId` till `POST /api/v1/playback/token`.
-2. Backend validerar `trackId`, playable-status och rights-status.
-3. Backend väljer rätt audio object key i R2.
-4. Backend returnerar kortlivad signed URL (15 min).
+Compose använder:
+- `Dockerfile.api`
+- `Dockerfile.web`
+- `apps/api/.env`
+- `apps/web/.env.local`
 
-## Upload/staging-princip
-All staging-upload sker under prefix i samma bucket:
-- `mrq-music-masters/staging/uploads/...`
+## Frontend proxy
+`apps/web` använder `MUSIC_API_URL` som target för Vite proxy:
+- Docker: `MUSIC_API_URL=http://api:3001`
+- Lokal utveckling: `MUSIC_API_URL=http://localhost:3001`
 
-## Enkel testbar struktur
-- `src/server.ts` (entry)
-- `src/app.ts`
-- `src/config`
-- `src/routes`
-- `src/services`
-- `src/repositories`
-- `src/lib`
-- `src/middleware`
-- `src/types`
+Browser går fortsatt via frontend och `/api` proxas till backend.
+
+## Kubernetes-förberedelse
+`infra/kubernetes/base` innehåller manifests för:
+- Namespace (`music-platform`)
+- API Deployment + Service
+- Web Deployment + Service
+- ConfigMap
+- Secret template (inga riktiga hemligheter)
+- Ingress template
+
+Images (placeholders):
+- `ghcr.io/OWNER/music-catalog-api:latest`
+- `ghcr.io/OWNER/soundloom-web:latest`
+
+Overlays finns i:
+- `infra/kubernetes/overlays/local`
+- `infra/kubernetes/overlays/staging`
+- `infra/kubernetes/overlays/production`
+
+## Placeholders
+- Ingress-host är exempelvärde.
+- Secret-template har tomma värden.
+- GHCR image-owner (`OWNER`) ska ersättas.
+
+## Nästa steg för CI/CD
+1. Bygg och push images för `apps/api` och `apps/web`.
+2. Ersätt `OWNER` i K8s overlays.
+3. Lägg in secrets via extern secret manager/CI.
+4. Lägg till pipeline-steg för test, build, image scan och deploy per overlay.

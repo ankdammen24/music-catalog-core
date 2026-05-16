@@ -1,30 +1,20 @@
-version: '3.9'
 services:
   api:
-    image: node:22-alpine
-    working_dir: /workspace
-    volumes: [".:/workspace"]
-    command: sh -c "corepack enable && pnpm install && pnpm dev:api"
-    ports: ["3000:3000"]
-    env_file: [.env]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "3001:3001"
+    env_file:
+      - apps/api/.env
 
-  audio-worker:
-    image: node:22-alpine
-    working_dir: /workspace
-    volumes: [".:/workspace"]
-    command: sh -c "corepack enable && pnpm install && pnpm dev:audio-worker"
-    env_file: [.env]
-
-  distribution-worker:
-    image: node:22-alpine
-    working_dir: /workspace
-    volumes: [".:/workspace"]
-    command: sh -c "corepack enable && pnpm install && pnpm dev:distribution-worker"
-    env_file: [.env]
-
-  radio-sync-worker:
-    image: node:22-alpine
-    working_dir: /workspace
-    volumes: [".:/workspace"]
-    command: sh -c "corepack enable && pnpm install && pnpm dev:radio-sync-worker"
-    env_file: [.env]
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/web/.env.local
+    depends_on:
+      - api

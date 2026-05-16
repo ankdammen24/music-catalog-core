@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-catalog-api
+  namespace: music-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: music-catalog-api
+  template:
+    metadata:
+      labels:
+        app: music-catalog-api
+    spec:
+      containers:
+        - name: music-catalog-api
+          image: ghcr.io/OWNER/music-catalog-api:latest
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: music-platform-config
+            - secretRef:
+                name: music-platform-secrets

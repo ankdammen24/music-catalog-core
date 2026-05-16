@@ -7,9 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "echo 'lint not configured yet'",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo 'tests not configured yet'"
+    "lint": "echo 'shared lint not configured'"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

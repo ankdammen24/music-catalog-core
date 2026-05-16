@@ -1,16 +1,21 @@
 {
   "name": "music-catalog-core",
   "private": true,
-  "version": "0.1.0",
-  "description": "Unified backend monorepo for Media Rosenqvist music catalog",
-  "packageManager": "pnpm@9.12.0",
+  "version": "0.2.0",
+  "description": "Deployable monorepo for Music Catalog API + Soundloom web",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/shared"
+  ],
   "scripts": {
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "dev:api": "pnpm --filter @mrq/api dev",
-    "dev:audio-worker": "pnpm --filter @mrq/audio-worker dev",
-    "dev:distribution-worker": "pnpm --filter @mrq/distribution-worker dev",
-    "dev:radio-sync-worker": "pnpm --filter @mrq/radio-sync-worker dev",
-    "dev": "pnpm dev:api"
+    "dev": "sh -c \"npm run dev:api & npm run dev:web\"",
+    "dev:api": "npm run dev --workspace @mrq/api",
+    "dev:web": "npm run dev --workspace @mrq/web",
+    "build": "npm run build:shared && npm run build:api && npm run build:web",
+    "build:shared": "npm run build --workspace @mrq/shared",
+    "build:api": "npm run build --workspace @mrq/api",
+    "build:web": "npm run build --workspace @mrq/web",
+    "lint": "npm run lint --workspace @mrq/api && npm run lint --workspace @mrq/web && npm run lint --workspace @mrq/shared"
   }
 }
