@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soundloom-web
+  namespace: music-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: soundloom-web
+  template:
+    metadata:
+      labels:
+        app: soundloom-web
+    spec:
+      containers:
+        - name: soundloom-web
+          image: ghcr.io/OWNER/soundloom-web:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: music-platform-config

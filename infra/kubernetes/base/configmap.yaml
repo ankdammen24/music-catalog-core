@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: music-platform-config
+  namespace: music-platform
+data:
+  NODE_ENV: production
+  PORT: "3001"
+  FRONTEND_ORIGIN: https://soundloom.example.com
+  MUSIC_API_URL: http://music-catalog-api:3001
+  R2_BUCKET_NAME: mrq-music-masters
+  R2_UPLOAD_PREFIX: staging/uploads/
