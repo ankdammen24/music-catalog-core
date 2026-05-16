@@ -1,0 +1,30 @@
+version: '3.9'
+services:
+  api:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes: [".:/workspace"]
+    command: sh -c "corepack enable && pnpm install && pnpm dev:api"
+    ports: ["3000:3000"]
+    env_file: [.env]
+
+  audio-worker:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes: [".:/workspace"]
+    command: sh -c "corepack enable && pnpm install && pnpm dev:audio-worker"
+    env_file: [.env]
+
+  distribution-worker:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes: [".:/workspace"]
+    command: sh -c "corepack enable && pnpm install && pnpm dev:distribution-worker"
+    env_file: [.env]
+
+  radio-sync-worker:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes: [".:/workspace"]
+    command: sh -c "corepack enable && pnpm install && pnpm dev:radio-sync-worker"
+    env_file: [.env]
