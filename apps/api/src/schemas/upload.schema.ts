@@ -1,3 +1,22 @@
 import { z } from 'zod';
-export const presignSchema = z.object({ bucketType: z.enum(['masters','previews','normalized','artwork','exports']), fileName: z.string(), contentType: z.string(), entityType: z.enum(['track','artist','album','release']), entityId: z.string().uuid() });
-export const completeSchema = z.object({ bucketType: z.enum(['masters','previews','normalized','artwork','exports']), entityType: z.enum(['track','artist','album','release']), entityId: z.string().uuid(), objectKey: z.string(), createProcessingJob: z.boolean().optional() });
+
+const bucketTypeSchema = z.enum(['staging', 'masters', 'previews', 'normalized', 'artwork', 'exports']);
+
+export const presignSchema = z.object({
+  bucketType: bucketTypeSchema.optional(),
+  fileName: z.string().min(1),
+  contentType: z.string().min(1),
+  entityType: z.enum(['track', 'artist', 'album', 'release']),
+  entityId: z.string().uuid(),
+  artistId: z.string().uuid().optional()
+});
+
+export const completeSchema = z.object({
+  bucketType: bucketTypeSchema,
+  bucket: z.string().optional(),
+  entityType: z.enum(['track', 'artist', 'album', 'release']),
+  entityId: z.string().uuid(),
+  objectKey: z.string().min(1),
+  contentType: z.string().optional(),
+  createProcessingJob: z.boolean().optional()
+});
