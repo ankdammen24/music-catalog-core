@@ -1,0 +1,4 @@
+import express from "express"; import cors from "cors";
+import { env } from "./config/env.js"; import { requireAuth } from "./auth/requireAuth.js"; import { errorHandler } from "./utils/errors.js";
+import { healthRoutes } from "./routes/health.routes.js"; import { artistsRoutes } from "./routes/artists.routes.js"; import { releasesRoutes } from "./routes/releases.routes.js"; import { tracksRoutes } from "./routes/tracks.routes.js"; import { uploadsRoutes } from "./routes/uploads.routes.js"; import { processingRoutes } from "./routes/processing.routes.js";
+export const app=express(); app.use(cors({origin:env.CORS_ORIGIN})); app.use(express.json()); app.use(healthRoutes); app.use(requireAuth); app.use(artistsRoutes); app.use(releasesRoutes); app.use(tracksRoutes); app.use(uploadsRoutes); app.use(processingRoutes); app.use(errorHandler);
