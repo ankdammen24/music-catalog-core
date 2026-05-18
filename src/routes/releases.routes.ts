@@ -1,0 +1,10 @@
+import { Router } from "express"; import { z } from "zod"; import { releasesService } from "../services/releases.service.js";
+const s=z.object({artist_id:z.string().uuid(),title:z.string().min(1),release_type:z.string().optional(),upc:z.string().optional(),artwork_r2_key:z.string().optional(),release_date:z.string().optional()});
+export const releasesRoutes=Router();
+releasesRoutes.get("/releases",async(r,sn)=>sn.json((await releasesService.list(r.auth!.organizationId)).data));
+releasesRoutes.post("/releases",async(r,sn)=>sn.status(201).json((await releasesService.create(r.auth!.organizationId,s.parse(r.body))).data));
+releasesRoutes.get("/releases/:id",async(r,sn)=>sn.json((await releasesService.byId(r.auth!.organizationId,r.params.id)).data));
+releasesRoutes.patch("/releases/:id",async(r,sn)=>sn.json((await releasesService.update(r.auth!.organizationId,r.params.id,s.partial().parse(r.body))).data));
+releasesRoutes.delete("/releases/:id",async(r,sn)=>{await releasesService.delete(r.auth!.organizationId,r.params.id);sn.status(204).send();});
+releasesRoutes.post("/releases/:id/submit",async(r,sn)=>sn.json((await releasesService.submit(r.auth!.organizationId,r.params.id)).data));
+releasesRoutes.post("/releases/:id/approve",async(r,sn)=>sn.json((await releasesService.approve(r.auth!.organizationId,r.params.id)).data));

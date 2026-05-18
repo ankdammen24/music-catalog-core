@@ -1,0 +1,6 @@
+import { Router } from "express"; import { z } from "zod"; import { buildStagingKey, signUpload } from "../services/r2.service.js"; import { supabase } from "../db/supabase.js";
+const presignSchema=z.object({trackId:z.string().uuid(),filename:z.string().min(1),contentType:z.string().min(1)});
+const completeSchema=z.object({trackId:z.string().uuid(),filename:z.string().min(1)});
+export const uploadsRoutes=Router();
+uploadsRoutes.post("/uploads/presign",async(r,s)=>{const b=presignSchema.parse(r.body); const key=buildStagingKey(r.auth!.organizationId,b.trackId,b.filename); const url=await signUpload(key,b.contentType); await supabase.from("upload_jobs").insert({organization_id:r.auth!.organizationId,track_id:b.trackId,original_filename:b.filename,r2_key:key,status:"pending"}); s.json({url,key});});
+uploadsRoutes.post("/uploads/complete",async(r,s)=>{const b=completeSchema.parse(r.body); const key=buildStagingKey(r.auth!.organizationId,b.trackId,b.filename); await supabase.from("upload_jobs").update({status:"uploaded"}).eq("organization_id",r.auth!.organizationId).eq("track_id",b.trackId).eq("r2_key",key); await supabase.from("tracks").update({status:"uploaded",audio_original_r2_key:key}).eq("organization_id",r.auth!.organizationId).eq("id",b.trackId); s.json({ok:true,key});});
