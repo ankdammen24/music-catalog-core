@@ -1,0 +1,1 @@
+-- Service role is expected for backend operations. Add RLS policies when exposing anon access.

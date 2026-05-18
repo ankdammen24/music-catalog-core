@@ -1,93 +1,25 @@
-# music-catalog-core monorepo
-
-Detta repo är nu ett gemensamt deploybart monorepo för backend + frontend.
-
-## Struktur
-
-```txt
-apps/
-  api/        # backend (äger DB, R2, upload, playback-token, rights)
-  web/        # soundloom frontend
-packages/
-  shared/     # delade TypeScript-typer
-infra/
-  docker/
-  kubernetes/
-    base/
-    overlays/
-      local/
-      staging/
-      production/
-```
-
-## Arkitekturgränser
-- `apps/web` pratar med backend via `/api` proxy.
-- `apps/web` pratar **inte** direkt med Supabase eller R2.
-- `apps/api` är enda tjänsten som pratar med Supabase och R2.
-- Bucket för media/upload: `mrq-music-masters`.
-- Upload-prefix för staging: `staging/uploads/`.
-
-## Lokalt (utan Docker)
-1. `npm install`
-2. Kopiera env-filer:
-   - `cp apps/api/.env.example apps/api/.env`
-   - `cp apps/web/.env.example apps/web/.env.local`
-3. Kör allt:
-   - `npm run dev`
-
-Separat:
-- `npm run dev:api`
-- `npm run dev:web`
-
-Build/lint:
-- `npm run build`
-- `npm run build:api`
-- `npm run build:web`
-- `npm run lint`
-
-## Docker Compose
-- `docker compose up --build`
-- API: `http://localhost:3001`
-- Web: `http://localhost:3000`
-
-Compose använder:
-- `Dockerfile.api`
-- `Dockerfile.web`
-- `apps/api/.env`
-- `apps/web/.env.local`
-
-## Frontend proxy
-`apps/web` använder `MUSIC_API_URL` som target för Vite proxy:
-- Docker: `MUSIC_API_URL=http://api:3001`
-- Lokal utveckling: `MUSIC_API_URL=http://localhost:3001`
-
-Browser går fortsatt via frontend och `/api` proxas till backend.
-
-## Kubernetes-förberedelse
-`infra/kubernetes/base` innehåller manifests för:
-- Namespace (`music-platform`)
-- API Deployment + Service
-- Web Deployment + Service
-- ConfigMap
-- Secret template (inga riktiga hemligheter)
-- Ingress template
-
-Images (placeholders):
-- `ghcr.io/OWNER/music-catalog-api:latest`
-- `ghcr.io/OWNER/soundloom-web:latest`
-
-Overlays finns i:
-- `infra/kubernetes/overlays/local`
-- `infra/kubernetes/overlays/staging`
-- `infra/kubernetes/overlays/production`
-
-## Placeholders
-- Ingress-host är exempelvärde.
-- Secret-template har tomma värden.
-- GHCR image-owner (`OWNER`) ska ersättas.
-
-## Nästa steg för CI/CD
-1. Bygg och push images för `apps/api` och `apps/web`.
-2. Ersätt `OWNER` i K8s overlays.
-3. Lägg in secrets via extern secret manager/CI.
-4. Lägg till pipeline-steg för test, build, image scan och deploy per overlay.
+# music-catalog-core
+Backend/API core för Media Rosenqvist musik-katalog.
+## Vad det är
+API + workers + Postgres schema + R2 integration för artister, releaser, tracks, uploads och processing.
+## Vad det inte är
+Inte frontend, inte radio-core, inte fristående auth-system.
+## Stack
+Node.js, TypeScript, Express, Supabase Postgres, Clerk JWT, Cloudflare R2, ffmpeg/ffprobe, Docker.
+## Lokal setup
+1. `cp .env.example .env`
+2. Fyll env-värden.
+3. `npm install`
+4. `npm run dev` (API) och `npm run worker` (worker)
+## Docker
+`docker compose up --build`
+## Supabase setup
+Kör `supabase/schema.sql`, `supabase/policies.sql`, `supabase/seed.sql` i Supabase SQL editor.
+## R2 setup
+En bucket: `mrq-music-masters`, med prefixes `staging/uploads`, `masters/originals`, `masters/flac`, `artwork`, `exports`.
+## Clerk setup
+Sätt `CLERK_JWT_ISSUER` + `CLERK_JWKS_URL`; API verifierar bearer-token och mappar org/user i databasen.
+## API-översikt
+`/health`, `/artists`, `/releases`, `/tracks`, `/uploads`, `/processing`.
+## Nästa steg
+RLS policies, kö-system (Redis/Queue), förbättrad EBU R128 loudness pipeline, distribution/export connectors.

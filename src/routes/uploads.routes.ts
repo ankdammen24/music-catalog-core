@@ -1,0 +1,5 @@
+import { Router } from "express";import { z } from "zod";import { createUploadUrl } from "../services/r2.service";import { createByOrg, patchByOrg } from "../services/base";
+const r=Router();
+r.post('/uploads/presign',async(req,res)=>{const a=(req as any).auth;const b=z.object({trackId:z.string().uuid(),filename:z.string(),contentType:z.string()}).parse(req.body);const key=`staging/uploads/${a.organizationId}/${b.trackId}/${b.filename}`;const url=await createUploadUrl(key,b.contentType);const {data}=await createByOrg('upload_jobs',{organization_id:a.organizationId,track_id:b.trackId,original_filename:b.filename,r2_key:key,status:'pending'});res.json({uploadUrl:url,key,job:data});});
+r.post('/uploads/complete',async(req,res)=>{const a=(req as any).auth;const b=z.object({jobId:z.string().uuid(),trackId:z.string().uuid(),r2Key:z.string()}).parse(req.body);await patchByOrg('upload_jobs',b.jobId,a.organizationId,{status:'uploaded'});await patchByOrg('tracks',b.trackId,a.organizationId,{status:'uploaded',audio_original_r2_key:b.r2Key});res.json({ok:true});});
+export const uploadsRouter=r;
