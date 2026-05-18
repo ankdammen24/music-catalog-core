@@ -1,0 +1,35 @@
+name: music-catalog-core-prod
+services:
+  api:
+    image: ghcr.io/mediarosenqvist/music-catalog-core:latest
+    container_name: music-catalog-api-prod
+    command: npm run start
+    env_file: .env.production
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    networks: [appnet]
+
+  worker:
+    image: ghcr.io/mediarosenqvist/music-catalog-core:latest
+    container_name: music-catalog-worker-prod
+    command: npm run worker
+    env_file: .env.production
+    restart: unless-stopped
+    depends_on: [api]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    networks: [appnet]
+
+networks:
+  appnet:
+    driver: bridge

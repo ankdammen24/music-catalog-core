@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+coverage/
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.staging.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# docker/runtime
+*.pid
+tmp/
