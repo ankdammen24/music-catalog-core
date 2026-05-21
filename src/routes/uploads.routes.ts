@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { supabase } from "../db/supabase.js";
+import type { Database } from "../db/types.js";
 import { buildStagingKey, signUpload } from "../services/r2.service.js";
 
 const presignSchema = z.object({ trackId: z.string().uuid(), filename: z.string().min(1), contentType: z.string().min(1) });
@@ -15,15 +16,17 @@ uploadsRoutes.post("/uploads/presign", async (req, res) => {
   const key = buildStagingKey(req.auth.organizationId, body.trackId, body.filename);
   const url = await signUpload(key, body.contentType);
 
-  await supabase.from("assets").insert({
+  const { data: insertedAssetData } = await supabase.from("assets").insert({
     organization_id: req.auth.organizationId,
     status: "pending",
     filename: body.filename,
     mime_type: body.contentType,
     r2_key: key,
-  });
+  }).select("*").single();
 
-  return res.json({ url, key });
+  const insertedAsset = insertedAssetData as Database["public"]["Tables"]["assets"]["Row"] | null;
+
+  return res.json({ url, key, assetId: insertedAsset?.id ?? null });
 });
 
 uploadsRoutes.post("/uploads/complete", async (req, res) => {
@@ -32,11 +35,14 @@ uploadsRoutes.post("/uploads/complete", async (req, res) => {
   const body = completeSchema.parse(req.body);
   const key = buildStagingKey(req.auth.organizationId, body.trackId, body.filename);
 
-  await supabase
+  const { data: updatedAssetsData } = await supabase
     .from("assets")
     .update({ status: "uploaded", size_bytes: body.sizeBytes ?? null })
     .eq("organization_id", req.auth.organizationId)
-    .eq("r2_key", key);
+    .eq("r2_key", key)
+    .select("*");
+
+  const updatedAssets = updatedAssetsData as Database["public"]["Tables"]["assets"]["Row"][] | null;
 
   await supabase
     .from("tracks")
@@ -44,5 +50,5 @@ uploadsRoutes.post("/uploads/complete", async (req, res) => {
     .eq("organization_id", req.auth.organizationId)
     .eq("id", body.trackId);
 
-  return res.json({ ok: true, key });
+  return res.json({ ok: true, key, updatedAssets: updatedAssets?.length ?? 0 });
 });

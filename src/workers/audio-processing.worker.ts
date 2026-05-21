@@ -15,7 +15,8 @@ async function streamToBuffer(stream: AsyncIterable<Uint8Array>): Promise<Buffer
 }
 
 async function tick() {
-  const { data: jobs } = await supabase.from("processing_jobs").select("*").eq("status", "queued").limit(1);
+  const { data: jobsData } = await supabase.from("processing_jobs").select("*").eq("status", "queued").limit(1);
+  const jobs = jobsData as Database["public"]["Tables"]["processing_jobs"]["Row"][] | null;
   const job: Database["public"]["Tables"]["processing_jobs"]["Row"] | undefined = jobs?.[0];
   if (!job || !job.track_id) return;
 

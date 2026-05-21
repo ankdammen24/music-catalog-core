@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { supabase } from "../db/supabase.js";
+import type { Database } from "../db/types.js";
 import { AppError } from "../utils/errors.js";
 import { verifyClerkToken } from "./clerk.js";
 
@@ -25,24 +26,27 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const claims = await verifyClerkToken(header.slice(7));
     if (!claims.org_id) throw new AppError(403, "Organization context missing");
 
-    const { data: organization, error: organizationError } = await supabase
+    const { data: orgData, error: organizationError } = await supabase
       .from("organizations")
       .upsert({ clerk_org_id: claims.org_id, name: claims.org_id }, { onConflict: "clerk_org_id" })
       .select("id, clerk_org_id")
       .single();
 
+    const organization = orgData as Pick<Database["public"]["Tables"]["organizations"]["Row"], "id" | "clerk_org_id"> | null;
     if (organizationError || !organization) throw new AppError(500, "Failed to resolve organization");
 
-    const { error: userError } = await supabase.from("users").upsert(
+    const { data: userData, error: userError } = await supabase.from("users").upsert(
       {
         clerk_user_id: claims.sub,
         organization_id: organization.id,
         role: "member",
       },
       { onConflict: "clerk_user_id" },
-    );
+    ).select("*").single();
 
-    if (userError) throw new AppError(500, "Failed to upsert user");
+    const user = userData as Database["public"]["Tables"]["users"]["Row"] | null;
+
+    if (userError || !user) throw new AppError(500, "Failed to upsert user");
 
     req.auth = { userId: claims.sub, organizationId: organization.id, clerkOrgId: organization.clerk_org_id };
     next();
