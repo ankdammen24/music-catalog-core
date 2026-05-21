@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "start:worker": "node dist/workers/audio-processing.worker.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/storage/__tests__/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
@@ -21,7 +22,8 @@
     "express": "^4.21.2",
     "jose": "^5.10.0",
     "pino": "^9.14.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@azure/storage-blob": "^12.27.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
