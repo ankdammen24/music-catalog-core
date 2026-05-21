@@ -10,6 +10,10 @@ healthRoutes.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "music-catalog-core", uptimeSeconds: Math.round(process.uptime()) });
 });
 
+healthRoutes.get("/cors-test", (req, res) => {
+  res.json({ ok: true, origin: req.get("origin") ?? null, cors: "enabled" });
+});
+
 healthRoutes.get("/health/database", async (_req, res) => {
   const started = Date.now();
   const { error } = await supabase.from("artists").select("id").limit(1);
