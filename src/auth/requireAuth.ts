@@ -1,19 +1,56 @@
 import { NextFunction, Request, Response } from "express";
-import { verifyClerkToken } from "./clerk.js";
-import { AppError } from "../utils/errors.js";
 import { supabase } from "../db/supabase.js";
+import type { Database } from "../db/types.js";
+import { AppError } from "../utils/errors.js";
+import { verifyClerkToken } from "./clerk.js";
 
-declare global { namespace Express { interface Request { auth?: { userId: string; organizationId: string }; } } }
+export type RequestUser = {
+  userId: string;
+  organizationId: string;
+  clerkOrgId: string;
+};
+
+declare global {
+  namespace Express {
+    interface Request {
+      auth?: RequestUser;
+    }
+  }
+}
 
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   try {
     const header = req.headers.authorization;
     if (!header?.startsWith("Bearer ")) throw new AppError(401, "Missing bearer token");
+
     const claims = await verifyClerkToken(header.slice(7));
     if (!claims.org_id) throw new AppError(403, "Organization context missing");
-    const { data: org } = await supabase.from("organizations").upsert({ clerk_org_id: claims.org_id, name: claims.org_id }, { onConflict: "clerk_org_id" }).select("id").single();
-    await supabase.from("users").upsert({ clerk_user_id: claims.sub, email: claims.email ?? null, name: claims.name ?? null }, { onConflict: "clerk_user_id" });
-    req.auth = { userId: claims.sub, organizationId: (org as { id: string }).id };
+
+    const { data: orgData, error: organizationError } = await supabase
+      .from("organizations")
+      .upsert({ clerk_org_id: claims.org_id, name: claims.org_id }, { onConflict: "clerk_org_id" })
+      .select("id, clerk_org_id")
+      .single();
+
+    const organization = orgData as Pick<Database["public"]["Tables"]["organizations"]["Row"], "id" | "clerk_org_id"> | null;
+    if (organizationError || !organization) throw new AppError(500, "Failed to resolve organization");
+
+    const { data: userData, error: userError } = await supabase.from("users").upsert(
+      {
+        clerk_user_id: claims.sub,
+        organization_id: organization.id,
+        role: "member",
+      },
+      { onConflict: "clerk_user_id" },
+    ).select("*").single();
+
+    const user = userData as Database["public"]["Tables"]["users"]["Row"] | null;
+
+    if (userError || !user) throw new AppError(500, "Failed to upsert user");
+
+    req.auth = { userId: claims.sub, organizationId: organization.id, clerkOrgId: organization.clerk_org_id };
     next();
-  } catch { next(new AppError(401, "Unauthorized")); }
+  } catch {
+    next(new AppError(401, "Unauthorized"));
+  }
 }
