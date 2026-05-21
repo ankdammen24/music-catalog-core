@@ -36,10 +36,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const { error: userError } = await supabase.from("users").upsert(
       {
         clerk_user_id: claims.sub,
-        clerk_org_id: claims.org_id,
         organization_id: organization.id,
-        email: claims.email ?? null,
-        name: claims.name ?? null,
+        role: "member",
       },
       { onConflict: "clerk_user_id" },
     );

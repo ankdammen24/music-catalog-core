@@ -4,7 +4,7 @@ import { supabase } from "../db/supabase.js";
 import { buildStagingKey, signUpload } from "../services/r2.service.js";
 
 const presignSchema = z.object({ trackId: z.string().uuid(), filename: z.string().min(1), contentType: z.string().min(1) });
-const completeSchema = z.object({ trackId: z.string().uuid(), filename: z.string().min(1) });
+const completeSchema = z.object({ trackId: z.string().uuid(), filename: z.string().min(1), sizeBytes: z.number().int().positive().optional() });
 
 export const uploadsRoutes = Router();
 
@@ -15,12 +15,12 @@ uploadsRoutes.post("/uploads/presign", async (req, res) => {
   const key = buildStagingKey(req.auth.organizationId, body.trackId, body.filename);
   const url = await signUpload(key, body.contentType);
 
-  await supabase.from("upload_jobs").insert({
+  await supabase.from("assets").insert({
     organization_id: req.auth.organizationId,
-    track_id: body.trackId,
-    original_filename: body.filename,
-    r2_key: key,
     status: "pending",
+    filename: body.filename,
+    mime_type: body.contentType,
+    r2_key: key,
   });
 
   return res.json({ url, key });
@@ -33,10 +33,9 @@ uploadsRoutes.post("/uploads/complete", async (req, res) => {
   const key = buildStagingKey(req.auth.organizationId, body.trackId, body.filename);
 
   await supabase
-    .from("upload_jobs")
-    .update({ status: "uploaded" })
+    .from("assets")
+    .update({ status: "uploaded", size_bytes: body.sizeBytes ?? null })
     .eq("organization_id", req.auth.organizationId)
-    .eq("track_id", body.trackId)
     .eq("r2_key", key);
 
   await supabase
