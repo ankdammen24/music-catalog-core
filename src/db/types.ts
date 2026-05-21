@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type TrackStatus = "draft" | "uploaded" | "processed" | "approved" | "rejected";
+export type TrackStatus = "draft" | "uploaded" | "processing" | "processed" | "approved" | "rejected";
 export type ReleaseStatus = "draft" | "ready_for_review" | "approved" | "rejected";
 export type ProcessingJobStatus = "queued" | "processing" | "running" | "completed" | "failed";
 
@@ -19,6 +19,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["artists"]["Row"]> & Pick<Database["public"]["Tables"]["artists"]["Row"], "organization_id" | "name">;
         Update: Partial<Database["public"]["Tables"]["artists"]["Row"]>;
+        Relationships: [];
       };
       releases: {
         Row: {
@@ -34,6 +35,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["releases"]["Row"]> & Pick<Database["public"]["Tables"]["releases"]["Row"], "organization_id" | "title">;
         Update: Partial<Database["public"]["Tables"]["releases"]["Row"]>;
+        Relationships: [];
       };
       tracks: {
         Row: {
@@ -56,6 +58,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["tracks"]["Row"]> & Pick<Database["public"]["Tables"]["tracks"]["Row"], "organization_id" | "title">;
         Update: Partial<Database["public"]["Tables"]["tracks"]["Row"]>;
+        Relationships: [];
       };
       assets: {
         Row: {
@@ -72,6 +75,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["assets"]["Row"]> & Pick<Database["public"]["Tables"]["assets"]["Row"], "organization_id" | "status" | "filename" | "r2_key">;
         Update: Partial<Database["public"]["Tables"]["assets"]["Row"]>;
+        Relationships: [];
       };
       processing_jobs: {
         Row: {
@@ -89,6 +93,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["processing_jobs"]["Row"]> & Pick<Database["public"]["Tables"]["processing_jobs"]["Row"], "organization_id" | "type" | "input_r2_key">;
         Update: Partial<Database["public"]["Tables"]["processing_jobs"]["Row"]>;
+        Relationships: [];
       };
       organizations: {
         Row: {
@@ -99,6 +104,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["organizations"]["Row"]> & Pick<Database["public"]["Tables"]["organizations"]["Row"], "clerk_org_id" | "name">;
         Update: Partial<Database["public"]["Tables"]["organizations"]["Row"]>;
+        Relationships: [];
       };
       users: {
         Row: {
@@ -110,6 +116,7 @@ export type Database = {
         };
         Insert: Partial<Database["public"]["Tables"]["users"]["Row"]> & Pick<Database["public"]["Tables"]["users"]["Row"], "clerk_user_id">;
         Update: Partial<Database["public"]["Tables"]["users"]["Row"]>;
+        Relationships: [];
       };
     };
   };
