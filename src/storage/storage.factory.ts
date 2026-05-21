@@ -34,11 +34,10 @@ export function createStorageProvider(): StorageProvider {
     return new S3Provider(client, bucket);
   }
 
-  const accountId = requireEnv("R2_ACCOUNT_ID");
   const accessKeyId = requireEnv("R2_ACCESS_KEY_ID");
   const secretAccessKey = requireEnv("R2_SECRET_ACCESS_KEY");
   const bucket = requireEnv("R2_BUCKET");
-  const r2Endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+  const r2Endpoint = requireEnv("R2_ENDPOINT");
 
   const client = new S3Client({
     region: env.R2_REGION,
