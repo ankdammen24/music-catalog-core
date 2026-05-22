@@ -1,29 +1,26 @@
 import { Router } from "express";
 import { getStorageProvider } from "../storage/storageProvider.js";
 import { deleteObjectSchema, ensureSafeObjectKey, listObjectsSchema, signDownloadSchema, signUploadSchema } from "../storage/storageValidation.js";
+import { createSignedDownload, createSignedUpload, getStorageDiagnostics, runStorageUploadTest } from "../services/storage/storage.service.js";
 
 export const storagePublicRoutes = Router();
 export const storageRoutes = Router();
 
 storagePublicRoutes.get("/api/storage/health", async (_req, res) => {
-  const provider = getStorageProvider();
-  const ok = await provider.listObjects({ maxKeys: 1 }).then(() => true).catch(() => false);
-  res.status(ok ? 200 : 503).json({ ok });
+  const diagnostics = await getStorageDiagnostics().catch(() => null);
+  const ok = Boolean(diagnostics?.bucketExists);
+  res.status(ok ? 200 : 503).json({ ok, diagnostics });
 });
 
 storageRoutes.post("/api/storage/uploads/sign", async (req, res) => {
   const payload = signUploadSchema.parse(req.body);
-  const provider = getStorageProvider();
-  const key = ensureSafeObjectKey(payload.key);
-  const url = await provider.getSignedUploadUrl({ key, contentType: payload.contentType, expiresInSeconds: payload.expiresInSeconds });
-  res.json({ url, key });
+  const signed = await createSignedUpload(payload);
+  res.json(signed);
 });
 storageRoutes.post("/api/storage/downloads/sign", async (req, res) => {
   const payload = signDownloadSchema.parse(req.body);
-  const provider = getStorageProvider();
-  const key = ensureSafeObjectKey(payload.key);
-  const url = await provider.getSignedDownloadUrl({ key, expiresInSeconds: payload.expiresInSeconds });
-  res.json({ url, key });
+  const signed = await createSignedDownload(payload);
+  res.json(signed);
 });
 storageRoutes.get("/api/storage/objects", async (req, res) => {
   const payload = listObjectsSchema.parse(req.query);
@@ -37,4 +34,10 @@ storageRoutes.delete("/api/storage/objects", async (req, res) => {
   const provider = getStorageProvider();
   await provider.deleteObject({ key: ensureSafeObjectKey(payload.key) });
   res.status(204).send();
+});
+
+storageRoutes.post("/debug/storage-upload-test", async (req, res) => {
+  if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
+  const out = await runStorageUploadTest(req.auth.organizationId);
+  res.json({ ok: true, ...out });
 });

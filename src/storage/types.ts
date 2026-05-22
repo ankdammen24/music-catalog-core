@@ -39,4 +39,5 @@ export interface StorageProvider {
   objectExists(input: ObjectExistsInput): Promise<boolean>;
   getSignedUploadUrl(input: SignedUrlInput): Promise<string>;
   getSignedDownloadUrl(input: SignedUrlInput): Promise<string>;
+  bucketExists(): Promise<boolean>;
 }
