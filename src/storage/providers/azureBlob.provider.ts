@@ -11,6 +11,7 @@ export class AzureBlobProvider implements StorageProvider {
   async objectExists(input: Parameters<StorageProvider["objectExists"]>[0]) { return this.container.getBlobClient(input.key).exists(); }
   async getSignedUploadUrl(input: Parameters<StorageProvider["getSignedUploadUrl"]>[0]) { return this.getSasUrl(input.key, input.expiresInSeconds ?? 900, "cw"); }
   async getSignedDownloadUrl(input: Parameters<StorageProvider["getSignedDownloadUrl"]>[0]) { return this.getSasUrl(input.key, input.expiresInSeconds ?? 300, "r"); }
+  async bucketExists() { return this.container.exists(); }
   private getSasUrl(key: string, expiresIn: number, perms: string) { const cred = this.client.credential; if (!(cred instanceof StorageSharedKeyCredential)) throw new Error("Azure shared key credential required for signed URLs"); const startsOn = new Date(); const expiresOn = new Date(Date.now() + expiresIn * 1000); const sas = generateBlobSASQueryParameters({ containerName: this.containerName, blobName: key, permissions: BlobSASPermissions.parse(perms), startsOn, expiresOn }, cred).toString(); return `${this.container.getBlockBlobClient(key).url}?${sas}`; }
 }
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> { const chunks: Buffer[] = []; for await (const c of stream) chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)); return Buffer.concat(chunks); }

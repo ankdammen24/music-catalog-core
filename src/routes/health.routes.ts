@@ -2,7 +2,7 @@ import net from "node:net";
 import { Router } from "express";
 import { env } from "../config/env.js";
 import { supabase } from "../db/supabase.js";
-import { getStorageProvider } from "../storage/storageProvider.js";
+import { getStorageDiagnostics } from "../services/storage/storage.service.js";
 
 export const healthRoutes = Router();
 
@@ -27,14 +27,16 @@ healthRoutes.get("/health/database", async (_req, res) => {
 });
 
 healthRoutes.get("/health/storage", async (_req, res) => {
-  const started = Date.now();
-
   try {
-    const storage = getStorageProvider();
-    await storage.listObjects({ prefix: "healthcheck/", maxKeys: 1 });
-    res.json({ status: "ok", dependency: "storage", provider: env.STORAGE_PROVIDER, latencyMs: Date.now() - started });
-  } catch {
-    res.status(503).json({ status: "error", dependency: "storage", message: "Storage check failed" });
+    const diagnostics = await getStorageDiagnostics();
+    if (!diagnostics.bucketExists) {
+      res.status(503).json({ status: "error", dependency: "storage", message: "Storage bucket not accessible", diagnostics });
+      return;
+    }
+
+    res.json({ status: "ok", dependency: "storage", ...diagnostics });
+  } catch (error) {
+    res.status(503).json({ status: "error", dependency: "storage", message: "Storage check failed", error: (error as Error).message });
   }
 });
 

@@ -8,6 +8,7 @@ export type RequestUser = {
   userId: string;
   organizationId: string;
   clerkOrgId: string;
+  role: "owner" | "admin" | "editor" | "viewer";
 };
 
 declare global {
@@ -39,7 +40,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       {
         clerk_user_id: claims.sub,
         organization_id: organization.id,
-        role: "member",
+        role: "viewer" as any,
       },
       { onConflict: "clerk_user_id" },
     ).select("*").single();
@@ -48,7 +49,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 
     if (userError || !user) throw new AppError(500, "Failed to upsert user");
 
-    req.auth = { userId: claims.sub, organizationId: organization.id, clerkOrgId: organization.clerk_org_id };
+    const role = (user.role === "member" ? "viewer" : user.role) as "owner" | "admin" | "editor" | "viewer";
+    req.auth = { userId: claims.sub, organizationId: organization.id, clerkOrgId: organization.clerk_org_id, role };
     next();
   } catch {
     next(new AppError(401, "Unauthorized"));
