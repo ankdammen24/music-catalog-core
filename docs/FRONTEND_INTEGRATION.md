@@ -1,11 +1,22 @@
-# Lovable frontend integration guide
+# Frontend integration guide
+
+## API base URL
+- `https://api.mediarosenqvist.com`
+
+## Frontend origins currently expected in CORS_ORIGINS
+- `https://catalogusmusicus.mediarosenqvist.com`
+- `https://soundloom.mediarosenqvist.com`
+- `https://soundloom-core.lovable.app`
 
 ## Frontend env variables
-- `VITE_API_BASE_URL=https://catalog.mediarosenqvist.com`
+- `VITE_API_BASE_URL=https://api.mediarosenqvist.com`
 - `VITE_CLERK_PUBLISHABLE_KEY=<your-clerk-publishable-key>`
 
-## Bearer token usage
-Frontend should send Clerk session token in `Authorization` header:
+## Authentication model
+- All protected routes require a Clerk Bearer token in the `Authorization` header.
+- Public health routes do **not** require auth (`/health`, `/health/database`, `/health/storage`, `/health/auth-config`, `/health/redis`, `/cors-test`).
+
+Example:
 
 ```ts
 const token = await clerk.session?.getToken();
@@ -17,42 +28,55 @@ await fetch(`${import.meta.env.VITE_API_BASE_URL}/artists`, {
 });
 ```
 
-## Example requests
-```ts
-await fetch(`${import.meta.env.VITE_API_BASE_URL}/uploads/presign`, {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    trackId: "<uuid>",
-    filename: "demo.wav",
-    contentType: "audio/wav",
-  }),
-});
+## CORS validation endpoint
+- `GET /cors-test` returns:
+  - request origin seen by API,
+  - allowed origins list,
+  - allowed methods and required request headers.
+
+Use this to debug browser CORS issues before testing protected endpoints.
+
+## Upload pipeline flow
+
+### 1) Initialize upload
+`POST /api/assets/uploads/init`
+
+Request body:
+
+```json
+{
+  "trackId": "uuid",
+  "filename": "demo.wav",
+  "contentType": "audio/wav",
+  "sizeBytes": 1234567
+}
 ```
 
-```ts
-await fetch(`${import.meta.env.VITE_API_BASE_URL}/artists`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
+Response includes signed `uploadUrl`, `objectKey`, and `assetId`.
+
+### 2) Upload file directly to R2
+Use `PUT` to the returned `uploadUrl` with the same `Content-Type`.
+
+### 3) Complete upload
+`POST /api/assets/uploads/complete`
+
+Request body:
+
+```json
+{
+  "trackId": "uuid",
+  "objectKey": "org/<org-id>/staging/uploads/<track-id>/...",
+  "sizeBytes": 1234567,
+  "mimeType": "audio/wav"
+}
 ```
 
-## CORS
-Backend accepts origins from `CORS_ORIGINS` (comma-separated), currently intended for:
-- `https://catalog.mediarosenqvist.com`
-- `https://soundloom-core.lovable.app`
-- `https://*.lovable.app`
-- future production frontend domain
+Response includes `jobId` for processing.
 
-## Endpoints ready for frontend
-- `GET /health`
-- `GET /artists`
-- `POST /artists`
-- `GET /releases`
-- `POST /releases`
-- `GET /tracks`
-- `POST /tracks`
-- `POST /uploads/presign`
-- `POST /uploads/complete`
+### 4) Fetch asset metadata
+`GET /api/assets/:id`
+
+### 5) Fetch short-lived download URL
+`GET /api/assets/:id/download-url`
+
+Response returns `downloadUrl` (5-minute expiry) and associated object key.
