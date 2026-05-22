@@ -10,9 +10,21 @@ const schema = z
     DATABASE_URL: z.string().min(1),
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-    CLERK_SECRET_KEY: z.string().min(1),
-    CLERK_JWT_ISSUER: z.string().url(),
-    CLERK_JWKS_URL: z.string().url(),
+
+    // Clerk (deprecated/optional) — kept temporarily for migration
+    CLERK_SECRET_KEY: z.string().optional(),
+    CLERK_JWT_ISSUER: z.string().url().optional(),
+    CLERK_JWKS_URL: z.string().url().optional(),
+
+    // Internal auth
+    JWT_SECRET: z.string().min(1),
+    JWT_EXPIRES_IN: z.string().default("15m"),
+    REFRESH_TOKEN_SECRET: z.string().min(1),
+    REFRESH_TOKEN_EXPIRES_IN: z.string().default("7d"),
+    ADMIN_EMAIL: z.string().email().optional(),
+    ADMIN_PASSWORD: z.string().optional(),
+    ADMIN_DISPLAY_NAME: z.string().optional(),
+
     STORAGE_PROVIDER: z.enum(["r2", "s3", "azure"]).default("r2"),
     STORAGE_PUBLIC_BASE_URL: z.string().url().optional(),
     R2_ACCOUNT_ID: z.string().optional(),
