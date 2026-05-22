@@ -10,13 +10,13 @@ export const uploadsRoutes = Router();
 uploadsRoutes.post("/uploads/init", async (req, res) => {
   if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
   const body = initSchema.parse(req.body);
-  const out = await initUpload({ organizationId: req.auth.organizationId, ...body });
+  const out = await initUpload({ organizationId: req.auth?.organizationId, ...body });
   return res.status(201).json(out);
 });
 
 uploadsRoutes.post("/uploads/complete", async (req, res) => {
   if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
   const body = completeSchema.parse(req.body);
-  const out = await completeUpload({ organizationId: req.auth.organizationId, ...body });
+  const out = await completeUpload({ organizationId: req.auth?.organizationId, ...body });
   return res.json({ ok: true, ...out });
 });

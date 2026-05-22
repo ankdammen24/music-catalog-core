@@ -2,8 +2,9 @@ import type { NextFunction, Request, Response } from "express";
 import { supabase } from "../db/supabase.js";
 import type { Database } from "../db/types.js";
 import { AppError } from "../utils/errors.js";
+import type { UserRole } from "./roles.js";
 
-export type OrgRole = "owner" | "admin" | "editor" | "viewer";
+export type OrgRole = UserRole;
 
 declare global {
   namespace Express {
@@ -15,6 +16,7 @@ declare global {
 
 export async function requireOrganizationContext(req: Request, _res: Response, next: NextFunction) {
   if (!req.auth) return next(new AppError(401, "Unauthorized"));
+  if (!req.auth.organizationId) return next(new AppError(400, "organizationId is required"));
 
   const { data, error } = await supabase
     .from("users")
@@ -26,8 +28,9 @@ export async function requireOrganizationContext(req: Request, _res: Response, n
   const membership = data as Pick<Database["public"]["Tables"]["users"]["Row"], "role" | "organization_id"> | null;
   if (error || !membership) return next(new AppError(403, "Organization membership missing"));
 
-  const role = (membership.role === "member" ? "viewer" : membership.role) as OrgRole;
-  req.orgRole = role;
+  req.orgRole = (["admin", "label", "artist", "viewer"] as const).includes(membership.role as OrgRole)
+    ? (membership.role as OrgRole)
+    : "viewer";
   next();
 }
 
