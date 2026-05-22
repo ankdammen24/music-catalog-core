@@ -8,10 +8,13 @@ const settingsSchema = z.object({ name: z.string().min(1).max(120) });
 export const organizationsRoutes = Router();
 
 organizationsRoutes.get("/organizations/me", async (req, res) => {
-  const { data: organization } = await supabase.from("organizations").select("*").eq("id", req.auth?.organizationId).single();
-  const { data: memberships } = await supabase.from("users").select("id, clerk_user_id, role").eq("organization_id", req.auth?.organizationId);
+  const organizationId = req.auth?.organizationId;
+  if (!organizationId) return res.status(401).json({ error: "organizationId is required" });
 
-  const { data: assets } = await supabase.from("assets").select("size_bytes").eq("organization_id", req.auth?.organizationId);
+  const { data: organization } = await supabase.from("organizations").select("*").eq("id", organizationId).single();
+  const { data: memberships } = await supabase.from("users").select("id, clerk_user_id, role").eq("organization_id", organizationId);
+
+  const { data: assets } = await supabase.from("assets").select("size_bytes").eq("organization_id", organizationId);
   const bytesUsed = (assets ?? []).reduce((sum, a: any) => sum + Number(a.size_bytes ?? 0), 0);
 
   const quotas = {
@@ -21,16 +24,21 @@ organizationsRoutes.get("/organizations/me", async (req, res) => {
     usedAssets: assets?.length ?? 0,
   };
 
-  res.json({ organization, memberships, activeRole: req.auth.role, quotas });
+  res.json({ organization, memberships, activeRole: req.auth?.role, quotas });
 });
 
 organizationsRoutes.patch("/organizations/settings", requireOrgRole(["admin"]), async (req, res) => {
+  const organizationId = req.auth?.organizationId;
+  if (!organizationId) return res.status(401).json({ error: "organizationId is required" });
+
   const body = settingsSchema.parse(req.body);
-  const { data } = await supabase.from("organizations").update({ name: body.name }).eq("id", req.auth?.organizationId).select("*").single();
+  const { data } = await supabase.from("organizations").update({ name: body.name }).eq("id", organizationId).select("*").single();
   res.json({ organization: data });
 });
 
 organizationsRoutes.post("/organizations/switch", async (req, res) => {
+  if (!req.auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+
   const schema = z.object({ clerkOrgId: z.string().min(1) });
   const body = schema.parse(req.body);
 
