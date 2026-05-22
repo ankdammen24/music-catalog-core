@@ -13,7 +13,11 @@ const PROCESSING_STATES = {
 
 export async function initUpload(input: { organizationId: string; trackId: string; filename: string; contentType: string; sizeBytes?: number }) {
   validateUploadRequest(input.contentType, input.sizeBytes);
-  const objectKey = `staging/uploads/${input.organizationId}/${input.trackId}/${Date.now()}-${randomUUID()}-${input.filename}`;
+  const { data: orgAssets } = await supabase.from("assets").select("size_bytes").eq("organization_id", input.organizationId);
+  const usedBytes = (orgAssets ?? []).reduce((sum, row: any) => sum + Number(row.size_bytes ?? 0), 0);
+  const maxBytes = Number(process.env.ORG_MAX_STORAGE_BYTES ?? 25 * 1024 * 1024 * 1024);
+  if (typeof input.sizeBytes === "number" && usedBytes + input.sizeBytes > maxBytes) throw new Error("Organization storage quota exceeded");
+  const objectKey = `org/${input.organizationId}/staging/uploads/${input.trackId}/${Date.now()}-${randomUUID()}-${input.filename}`;
   const { url } = await createSignedUpload({ key: objectKey, contentType: input.contentType, expiresInSeconds: 900 });
   const assetId = await saveAssetMetadata({ organizationId: input.organizationId, key: objectKey, filename: input.filename, mimeType: input.contentType, sizeBytes: input.sizeBytes, status: "pending", metadata: { trackId: input.trackId, stage: "temporary" } });
 

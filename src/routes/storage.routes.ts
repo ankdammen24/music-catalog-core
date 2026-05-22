@@ -14,12 +14,12 @@ storagePublicRoutes.get("/api/storage/health", async (_req, res) => {
 
 storageRoutes.post("/api/storage/uploads/sign", async (req, res) => {
   const payload = signUploadSchema.parse(req.body);
-  const signed = await createSignedUpload(payload);
+  const signed = await createSignedUpload({ ...payload, key: `org/${req.auth!.organizationId}/${payload.key}` });
   res.json(signed);
 });
 storageRoutes.post("/api/storage/downloads/sign", async (req, res) => {
   const payload = signDownloadSchema.parse(req.body);
-  const signed = await createSignedDownload(payload);
+  const signed = await createSignedDownload({ ...payload, key: `org/${req.auth!.organizationId}/${payload.key}` });
   res.json(signed);
 });
 storageRoutes.get("/api/storage/objects", async (req, res) => {
