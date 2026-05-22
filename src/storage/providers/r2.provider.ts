@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageProvider } from "../types.js";
 
@@ -12,4 +12,5 @@ export class R2Provider implements StorageProvider {
   async objectExists(input: Parameters<StorageProvider["objectExists"]>[0]) { try { await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: input.key })); return true; } catch { return false; } }
   async getSignedUploadUrl(input: Parameters<StorageProvider["getSignedUploadUrl"]>[0]) { return getSignedUrl(this.client, new PutObjectCommand({ Bucket: this.bucket, Key: input.key, ContentType: input.contentType }), { expiresIn: input.expiresInSeconds ?? 900 }); }
   async getSignedDownloadUrl(input: Parameters<StorageProvider["getSignedDownloadUrl"]>[0]) { return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: input.key }), { expiresIn: input.expiresInSeconds ?? 300 }); }
+  async bucketExists() { try { await this.client.send(new HeadBucketCommand({ Bucket: this.bucket })); return true; } catch { return false; } }
 }
