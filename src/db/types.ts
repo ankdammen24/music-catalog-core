@@ -237,21 +237,21 @@ export type Database = {
           id: string;
           clerk_user_id: string;
           organization_id: string | null;
-          role: "owner" | "admin" | "member";
+          role: "admin" | "label" | "artist" | "viewer";
           created_at: string;
         };
         Insert: {
           id?: string;
           clerk_user_id: string;
           organization_id?: string | null;
-          role?: "owner" | "admin" | "member";
+          role?: "admin" | "label" | "artist" | "viewer";
           created_at?: string;
         };
         Update: {
           id?: string;
           clerk_user_id?: string;
           organization_id?: string | null;
-          role?: "owner" | "admin" | "member";
+          role?: "admin" | "label" | "artist" | "viewer";
           created_at?: string;
         };
         Relationships: [];

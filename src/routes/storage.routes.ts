@@ -13,13 +13,15 @@ storagePublicRoutes.get("/api/storage/health", async (_req, res) => {
 });
 
 storageRoutes.post("/api/storage/uploads/sign", async (req, res) => {
+  if (!req.auth?.organizationId) return res.status(401).json({ error: "organizationId is required" });
   const payload = signUploadSchema.parse(req.body);
-  const signed = await createSignedUpload({ ...payload, key: `org/${req.auth!.organizationId}/${payload.key}` });
+  const signed = await createSignedUpload({ ...payload, key: `org/${req.auth.organizationId}/${payload.key}` });
   res.json(signed);
 });
 storageRoutes.post("/api/storage/downloads/sign", async (req, res) => {
+  if (!req.auth?.organizationId) return res.status(401).json({ error: "organizationId is required" });
   const payload = signDownloadSchema.parse(req.body);
-  const signed = await createSignedDownload({ ...payload, key: `org/${req.auth!.organizationId}/${payload.key}` });
+  const signed = await createSignedDownload({ ...payload, key: `org/${req.auth.organizationId}/${payload.key}` });
   res.json(signed);
 });
 storageRoutes.get("/api/storage/objects", async (req, res) => {
@@ -37,7 +39,7 @@ storageRoutes.delete("/api/storage/objects", async (req, res) => {
 });
 
 storageRoutes.post("/debug/storage-upload-test", async (req, res) => {
-  if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.auth?.organizationId) return res.status(401).json({ error: "organizationId is required" });
   const out = await runStorageUploadTest(req.auth.organizationId);
   res.json({ ok: true, ...out });
 });

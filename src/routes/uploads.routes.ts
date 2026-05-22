@@ -8,14 +8,14 @@ const completeSchema = z.object({ trackId: z.string().uuid(), objectKey: z.strin
 export const uploadsRoutes = Router();
 
 uploadsRoutes.post("/uploads/init", async (req, res) => {
-  if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.auth?.organizationId) return res.status(401).json({ error: "organizationId is required" });
   const body = initSchema.parse(req.body);
   const out = await initUpload({ organizationId: req.auth.organizationId, ...body });
   return res.status(201).json(out);
 });
 
 uploadsRoutes.post("/uploads/complete", async (req, res) => {
-  if (!req.auth) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.auth?.organizationId) return res.status(401).json({ error: "organizationId is required" });
   const body = completeSchema.parse(req.body);
   const out = await completeUpload({ organizationId: req.auth.organizationId, ...body });
   return res.json({ ok: true, ...out });
