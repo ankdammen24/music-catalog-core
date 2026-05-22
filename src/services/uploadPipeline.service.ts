@@ -25,7 +25,23 @@ export async function initUpload(input: { organizationId: string; trackId: strin
 }
 
 export async function completeUpload(input: { organizationId: string; trackId: string; objectKey: string; sizeBytes?: number; mimeType?: string }) {
-  await supabase.from("assets").update({ status: "uploaded", size_bytes: input.sizeBytes ?? null, mime_type: input.mimeType ?? null }).eq("organization_id", input.organizationId).eq("r2_key", input.objectKey);
+  const { data: pendingAsset } = await supabase
+    .from("assets")
+    .select("id")
+    .eq("organization_id", input.organizationId)
+    .eq("r2_key", input.objectKey)
+    .eq("status", "pending")
+    .contains("metadata", { trackId: input.trackId })
+    .maybeSingle();
+
+  if (!pendingAsset) {
+    throw new Error("Upload object key is invalid for this organization or track");
+  }
+
+  await supabase
+    .from("assets")
+    .update({ status: "uploaded", size_bytes: input.sizeBytes ?? null, mime_type: input.mimeType ?? null })
+    .eq("id", pendingAsset.id);
 
   const { data: job } = await supabase.from("processing_jobs").insert({
     organization_id: input.organizationId,

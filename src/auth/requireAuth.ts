@@ -40,7 +40,6 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       {
         clerk_user_id: claims.sub,
         organization_id: organization.id,
-        role: "viewer" as any,
       },
       { onConflict: "clerk_user_id" },
     ).select("*").single();

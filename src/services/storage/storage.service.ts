@@ -13,7 +13,9 @@ const uploadConstraintsSchema = z.object({
 
 export const storageUploadConstraints = uploadConstraintsSchema.parse({
   maxBytes: process.env.STORAGE_MAX_UPLOAD_BYTES,
-  allowedMimeTypes: (process.env.STORAGE_ALLOWED_MIME_TYPES ?? "").split(",").map((v) => v.trim()).filter(Boolean),
+  allowedMimeTypes: process.env.STORAGE_ALLOWED_MIME_TYPES
+    ? process.env.STORAGE_ALLOWED_MIME_TYPES.split(",").map((v) => v.trim()).filter(Boolean)
+    : undefined,
 });
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
