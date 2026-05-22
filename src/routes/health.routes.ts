@@ -38,13 +38,23 @@ healthRoutes.get("/health/storage", async (_req, res) => {
   try {
     const diagnostics = await getStorageDiagnostics();
     if (!diagnostics.bucketExists) {
-      res.status(503).json({ status: "error", dependency: "storage", message: "Storage bucket not accessible", diagnostics });
+      res.status(503).json({
+        status: "error",
+        dependency: "storage",
+        provider: diagnostics.provider,
+        bucketConfigured: diagnostics.bucketConfigured,
+        endpointConfigured: diagnostics.endpointConfigured,
+        publicBaseUrlConfigured: diagnostics.publicBaseUrlConfigured,
+        httpStatusCode: diagnostics.httpStatusCode,
+        code: diagnostics.code,
+        message: diagnostics.message,
+      });
       return;
     }
 
     res.json({ status: "ok", dependency: "storage", ...diagnostics });
   } catch (error) {
-    res.status(503).json({ status: "error", dependency: "storage", message: "Storage check failed", error: (error as Error).message });
+    res.status(503).json({ status: "error", dependency: "storage", message: "Storage check failed" });
   }
 });
 
