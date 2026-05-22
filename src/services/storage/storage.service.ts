@@ -73,6 +73,14 @@ export async function getStorageDiagnostics() {
 
   const bucketExists = await withStorageRetry("bucket exists", () => provider.bucketExists(), 2);
   const sampleObjects = await withStorageRetry("list objects", () => provider.listObjects({ prefix: "", maxKeys: 5 }), 2);
+  const sampleKeys = sampleObjects.slice(0, 5).map((item) => item.key);
+  const r2Diagnostics = env.STORAGE_PROVIDER === "r2"
+    ? {
+        endpoint: env.R2_ENDPOINT ?? `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        accountIdSuffix: env.R2_ACCOUNT_ID ? env.R2_ACCOUNT_ID.slice(-6) : null,
+        configuredRegion: env.R2_REGION,
+      }
+    : null;
 
   return {
     provider: env.STORAGE_PROVIDER,
@@ -80,8 +88,10 @@ export async function getStorageDiagnostics() {
     bucketExists,
     latencyMs: Date.now() - started,
     sampleObjectCount: sampleObjects.length,
+    sampleKeys,
     maxUploadBytes: storageUploadConstraints.maxBytes,
     allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
+    r2: r2Diagnostics,
   };
 }
 

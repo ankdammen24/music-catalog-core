@@ -1,6 +1,7 @@
 import net from "node:net";
 import { Router } from "express";
 import { env } from "../config/env.js";
+import { corsOrigins } from "../config/env.js";
 import { supabase } from "../db/supabase.js";
 import { getStorageDiagnostics } from "../services/storage/storage.service.js";
 
@@ -11,7 +12,14 @@ healthRoutes.get("/health", (_req, res) => {
 });
 
 healthRoutes.get("/cors-test", (req, res) => {
-  res.json({ ok: true, origin: req.get("origin") ?? null, cors: "enabled" });
+  res.json({
+    ok: true,
+    origin: req.get("origin") ?? null,
+    cors: "enabled",
+    allowedOrigins: corsOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    requiredRequestHeaders: ["Content-Type", "Authorization"],
+  });
 });
 
 healthRoutes.get("/health/database", async (_req, res) => {
