@@ -69,30 +69,68 @@ export async function saveAssetMetadata(input: {
 export async function getStorageDiagnostics() {
   const provider = getStorageProvider();
   const started = Date.now();
-  const bucket = env.STORAGE_PROVIDER === "r2" ? env.R2_BUCKET : env.STORAGE_PROVIDER === "s3" ? env.AWS_S3_BUCKET : env.AZURE_BLOB_CONTAINER;
+  const endpoint = env.STORAGE_PROVIDER === "r2" ? (env.R2_ENDPOINT ?? `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`) : undefined;
+  const publicBaseUrl = env.STORAGE_PUBLIC_BASE_URL;
 
-  const bucketExists = await withStorageRetry("bucket exists", () => provider.bucketExists(), 2);
-  const sampleObjects = await withStorageRetry("list objects", () => provider.listObjects({ prefix: "", maxKeys: 5 }), 2);
-  const sampleKeys = sampleObjects.slice(0, 5).map((item) => item.key);
-  const r2Diagnostics = env.STORAGE_PROVIDER === "r2"
-    ? {
-        endpoint: env.R2_ENDPOINT ?? `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-        accountIdSuffix: env.R2_ACCOUNT_ID ? env.R2_ACCOUNT_ID.slice(-6) : null,
-        configuredRegion: env.R2_REGION,
-      }
-    : null;
+  try {
+    await withStorageRetry("storage health list objects", () => provider.listObjects({ prefix: "", maxKeys: 1 }), 1);
+    return {
+      provider: env.STORAGE_PROVIDER,
+      bucketConfigured: Boolean(env.R2_BUCKET),
+      endpointConfigured: Boolean(endpoint),
+      publicBaseUrlConfigured: Boolean(publicBaseUrl),
+      bucketExists: true,
+      latencyMs: Date.now() - started,
+      httpStatusCode: 200,
+      code: "OK",
+      message: "Storage health check passed",
+      maxUploadBytes: storageUploadConstraints.maxBytes,
+      allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
+    };
+  } catch (error) {
+    const err = error as {
+      name?: string;
+      message?: string;
+      code?: string;
+      Code?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    const rawCode = err.code ?? err.Code;
+    const httpStatusCode = err.$metadata?.httpStatusCode ?? 503;
 
-  return {
-    provider: env.STORAGE_PROVIDER,
-    bucket,
-    bucketExists,
-    latencyMs: Date.now() - started,
-    sampleObjectCount: sampleObjects.length,
-    sampleKeys,
-    maxUploadBytes: storageUploadConstraints.maxBytes,
-    allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
-    r2: r2Diagnostics,
-  };
+    const mappedMessage = rawCode === "AccessDenied"
+      ? "Storage permission issue"
+      : rawCode === "NoSuchBucket"
+        ? "Storage bucket missing or name is incorrect"
+        : rawCode === "InvalidAccessKeyId"
+          ? "Storage access key is invalid"
+          : rawCode === "SignatureDoesNotMatch"
+            ? "Storage secret or endpoint configuration is invalid"
+            : "Storage check failed";
+
+    console.error("Storage health check failed", {
+      provider: env.STORAGE_PROVIDER,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorCode: err.code,
+      errorCodeAlt: err.Code,
+      httpStatusCode: err.$metadata?.httpStatusCode,
+    });
+
+    return {
+      provider: env.STORAGE_PROVIDER,
+      bucketConfigured: Boolean(env.R2_BUCKET),
+      endpointConfigured: Boolean(endpoint),
+      publicBaseUrlConfigured: Boolean(publicBaseUrl),
+      bucketExists: false,
+      latencyMs: Date.now() - started,
+      httpStatusCode,
+      code: rawCode ?? "UNKNOWN",
+      message: mappedMessage,
+      maxUploadBytes: storageUploadConstraints.maxBytes,
+      allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
+    };
+  }
 }
 
 export async function createSignedUpload(input: { key: string; contentType: string; expiresInSeconds?: number }) {
