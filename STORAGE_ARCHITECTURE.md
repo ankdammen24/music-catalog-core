@@ -1,39 +1,40 @@
 # Storage Architecture
 
+## End-to-end upload pipeline
+
+1. `POST /uploads/init` creates a temporary upload key and returns a signed upload URL.
+2. Client uploads directly to object storage.
+3. `POST /uploads/complete` marks uploaded asset, creates a processing job, and enqueues the job in Redis.
+4. Audio worker pulls queued jobs, validates/probes audio, normalizes via ffmpeg, analyzes loudness, converts to FLAC, generates waveform PNG and preview MP3.
+5. Worker writes normalized outputs to storage and updates track/asset/job state.
+
+## Processing states
+
+Track states used by the pipeline:
+- `uploaded`
+- `validating`
+- `processing`
+- `ready`
+- `failed`
+
 ## Provider abstraction
 
-The backend uses a provider abstraction to support multiple object stores:
+The backend supports:
 - Cloudflare R2
 - AWS S3
 - Azure Blob
 
-Provider selection is controlled by `STORAGE_PROVIDER` and initialized in `src/storage/storage.factory.ts`.
+Provider selection is controlled by `STORAGE_PROVIDER`.
 
-## Service layer
+## Operational endpoints
 
-`src/services/storage/storage.service.ts` provides cross-provider behavior:
-- retry/backoff handling for transient failures
-- upload mime/type and size validation
-- signed upload/download URL generation
-- bucket diagnostics and existence checks
-- debug upload test flow
-- asset metadata persistence to Supabase `assets`
-
-## Health and diagnostics
-
-- `GET /health/storage` now returns detailed diagnostics including bucket availability.
-- `GET /api/storage/health` exposes storage readiness plus diagnostics.
-
-## Debug operations
-
-- `POST /debug/storage-upload-test` uploads a temporary test object, verifies existence, and deletes it.
-
-## Upload controls
-
-- `STORAGE_MAX_UPLOAD_BYTES` (default: 50 MB)
-- `STORAGE_ALLOWED_MIME_TYPES` (comma-separated allow-list)
+- `GET /health/storage`
+- `GET /api/storage/health`
+- `POST /debug/storage-upload-test`
+- `GET /processing/dashboard`
+- `POST /processing/jobs/:id/retry`
 
 ## Security notes
 
-- Metadata DB stores object keys (`r2_key`), not permanent public URLs.
+- Database stores object keys, not permanent public URLs.
 - Signed URLs are short-lived and generated server-side.
