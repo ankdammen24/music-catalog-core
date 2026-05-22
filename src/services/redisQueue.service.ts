@@ -38,5 +38,5 @@ export async function dequeueProcessingJob(): Promise<string | null> {
   const result = await sendRedisCommand(["RPOP", QUEUE_NAME]);
   if (result.startsWith("$-1")) return null;
   const lines = result.split("\r\n");
-  return lines.length > 1 ? lines[1] : null;
+  return lines.length > 1 ? (lines[1] ?? null) : null;
 }
