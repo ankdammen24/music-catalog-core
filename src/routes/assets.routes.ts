@@ -22,13 +22,13 @@ export const assetsRoutes = Router();
 
 assetsRoutes.post("/api/assets/uploads/init", async (req, res) => {
   const body = initSchema.parse(req.body);
-  const out = await initUpload({ organizationId: req.auth!.organizationId, ...body });
+  const out = await initUpload({ organizationId: req.auth?.organizationId, ...body });
   res.status(201).json(out);
 });
 
 assetsRoutes.post("/api/assets/uploads/complete", async (req, res) => {
   const body = completeSchema.parse(req.body);
-  const out = await completeUpload({ organizationId: req.auth!.organizationId, ...body });
+  const out = await completeUpload({ organizationId: req.auth?.organizationId, ...body });
   res.json({ ok: true, ...out });
 });
 
@@ -36,7 +36,7 @@ assetsRoutes.get("/api/assets/:id", async (req, res) => {
   const { data } = await supabase
     .from("assets")
     .select("id, organization_id, status, filename, mime_type, size_bytes, r2_key, created_at, updated_at, metadata")
-    .eq("organization_id", req.auth!.organizationId)
+    .eq("organization_id", req.auth?.organizationId)
     .eq("id", req.params.id)
     .single();
 
@@ -52,7 +52,7 @@ assetsRoutes.get("/api/assets/:id/download-url", async (req, res) => {
   const { data } = await supabase
     .from("assets")
     .select("id, r2_key")
-    .eq("organization_id", req.auth!.organizationId)
+    .eq("organization_id", req.auth?.organizationId)
     .eq("id", req.params.id)
     .single();
 
