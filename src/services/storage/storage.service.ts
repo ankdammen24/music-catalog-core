@@ -21,7 +21,6 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function withStorageRetry<T>(opName: string, fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   let lastError: unknown;
-
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
       return await fn();
@@ -31,7 +30,6 @@ export async function withStorageRetry<T>(opName: string, fn: () => Promise<T>, 
       await wait(Math.min(250 * 2 ** (attempt - 1), 1_500));
     }
   }
-
   throw new Error(`Storage operation failed: ${opName}`, { cause: lastError });
 }
 
@@ -39,7 +37,6 @@ export function validateUploadRequest(contentType: string, sizeBytes?: number): 
   if (!storageUploadConstraints.allowedMimeTypes.includes(contentType)) {
     throw new Error(`Unsupported mime type: ${contentType}`);
   }
-
   if (typeof sizeBytes === "number" && sizeBytes > storageUploadConstraints.maxBytes) {
     throw new Error(`Upload exceeds max size of ${storageUploadConstraints.maxBytes} bytes`);
   }
@@ -63,7 +60,6 @@ export async function saveAssetMetadata(input: {
     r2_key: input.key,
     metadata: input.metadata ?? null,
   }).select("id").single();
-
   return data?.id ?? null;
 }
 
@@ -89,7 +85,6 @@ export async function getStorageDiagnostics() {
   try {
     const client = buildR2Client();
     await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
-
     return {
       provider: env.STORAGE_PROVIDER,
       bucketConfigured,
@@ -113,7 +108,6 @@ export async function getStorageDiagnostics() {
     };
     const rawCode = err.code ?? err.Code ?? err.name ?? "UNKNOWN";
     const httpStatusCode = err.$metadata?.httpStatusCode ?? 503;
-
     const mappedMessage =
       rawCode === "AccessDenied" ? "Storage permission issue" :
       rawCode === "NoSuchBucket" ? "Storage bucket missing or name is incorrect" :
@@ -152,12 +146,10 @@ export async function createSignedUpload(input: { key: string; contentType: stri
   validateUploadRequest(input.contentType);
   const provider = getStorageProvider();
   const key = ensureSafeObjectKey(input.key);
-
   const url = await withStorageRetry(
     "signed upload url",
     () => provider.getSignedUploadUrl({ key, contentType: input.contentType, expiresInSeconds: input.expiresInSeconds }),
   );
-
   return { key, url };
 }
 
@@ -172,114 +164,8 @@ export async function runStorageUploadTest(organizationId: string) {
   const provider = getStorageProvider();
   const key = `debug/upload-test/${organizationId}/${Date.now()}-${randomUUID()}.txt`;
   const body = Buffer.from("storage upload test");
-
   await withStorageRetry("upload test object", () => provider.uploadObject({ key, body, contentType: "text/plain" }));
   const exists = await withStorageRetry("verify uploaded object", () => provider.objectExists({ key }));
   await withStorageRetry("delete uploaded object", () => provider.deleteObject({ key }));
-
-  return { key, exists };
-}    r2_key: input.key,
-    metadata: input.metadata ?? null,
-  }).select("id").single();
-
-  return data?.id ?? null;
-}
-
-export async function getStorageDiagnostics() {
-  const provider = getStorageProvider();
-  const started = Date.now();
-  const endpoint = env.STORAGE_PROVIDER === "r2" ? (env.R2_ENDPOINT ?? `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`) : undefined;
-  const publicBaseUrl = env.STORAGE_PUBLIC_BASE_URL;
-
-  try {
-    await withStorageRetry("storage health list objects", () => provider.listObjects({ prefix: "", maxKeys: 1 }), 1);
-    return {
-      provider: env.STORAGE_PROVIDER,
-      bucketConfigured: Boolean(env.R2_BUCKET),
-      endpointConfigured: Boolean(endpoint),
-      publicBaseUrlConfigured: Boolean(publicBaseUrl),
-      bucketExists: true,
-      latencyMs: Date.now() - started,
-      httpStatusCode: 200,
-      code: "OK",
-      message: "Storage health check passed",
-      maxUploadBytes: storageUploadConstraints.maxBytes,
-      allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
-    };
-  } catch (error) {
-    const err = error as {
-      name?: string;
-      message?: string;
-      code?: string;
-      Code?: string;
-      $metadata?: { httpStatusCode?: number };
-    };
-    const rawCode = err.code ?? err.Code;
-    const httpStatusCode = err.$metadata?.httpStatusCode ?? 503;
-
-    const mappedMessage = rawCode === "AccessDenied"
-      ? "Storage permission issue"
-      : rawCode === "NoSuchBucket"
-        ? "Storage bucket missing or name is incorrect"
-        : rawCode === "InvalidAccessKeyId"
-          ? "Storage access key is invalid"
-          : rawCode === "SignatureDoesNotMatch"
-            ? "Storage secret or endpoint configuration is invalid"
-            : "Storage check failed";
-
-    console.error("Storage health check failed", {
-      provider: env.STORAGE_PROVIDER,
-      errorName: err.name,
-      errorMessage: err.message,
-      errorCode: err.code,
-      errorCodeAlt: err.Code,
-      httpStatusCode: err.$metadata?.httpStatusCode,
-    });
-
-    return {
-      provider: env.STORAGE_PROVIDER,
-      bucketConfigured: Boolean(env.R2_BUCKET),
-      endpointConfigured: Boolean(endpoint),
-      publicBaseUrlConfigured: Boolean(publicBaseUrl),
-      bucketExists: false,
-      latencyMs: Date.now() - started,
-      httpStatusCode,
-      code: rawCode ?? "UNKNOWN",
-      message: mappedMessage,
-      maxUploadBytes: storageUploadConstraints.maxBytes,
-      allowedMimeTypes: storageUploadConstraints.allowedMimeTypes,
-    };
-  }
-}
-
-export async function createSignedUpload(input: { key: string; contentType: string; expiresInSeconds?: number }) {
-  validateUploadRequest(input.contentType);
-  const provider = getStorageProvider();
-  const key = ensureSafeObjectKey(input.key);
-
-  const url = await withStorageRetry(
-    "signed upload url",
-    () => provider.getSignedUploadUrl({ key, contentType: input.contentType, expiresInSeconds: input.expiresInSeconds }),
-  );
-
-  return { key, url };
-}
-
-export async function createSignedDownload(input: { key: string; expiresInSeconds?: number }) {
-  const provider = getStorageProvider();
-  const key = ensureSafeObjectKey(input.key);
-  const url = await withStorageRetry("signed download url", () => provider.getSignedDownloadUrl({ key, expiresInSeconds: input.expiresInSeconds }));
-  return { key, url };
-}
-
-export async function runStorageUploadTest(organizationId: string) {
-  const provider = getStorageProvider();
-  const key = `debug/upload-test/${organizationId}/${Date.now()}-${randomUUID()}.txt`;
-  const body = Buffer.from("storage upload test");
-
-  await withStorageRetry("upload test object", () => provider.uploadObject({ key, body, contentType: "text/plain" }));
-  const exists = await withStorageRetry("verify uploaded object", () => provider.objectExists({ key }));
-  await withStorageRetry("delete uploaded object", () => provider.deleteObject({ key }));
-
   return { key, exists };
 }
