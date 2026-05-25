@@ -1,82 +1,103 @@
-# Frontend integration guide
+# Frontend integration (Media Rosenqvist Connect + Microsoft Entra External ID)
 
-## API base URL
-- `https://api.mediarosenqvist.com`
+Den här backenden använder nu `connect.mediarosenqvist.com` som auth-backend/API-gateway.
 
-## Frontend origins currently expected in CORS_ORIGINS
-- `https://catalogusmusicus.mediarosenqvist.com`
-- `https://soundloom.mediarosenqvist.com`
-- `https://soundloom-core.lovable.app`
+## Miljövariabler i frontend
 
-## Frontend env variables
-- `VITE_API_BASE_URL=https://api.mediarosenqvist.com`
-- `VITE_CLERK_PUBLISHABLE_KEY=<your-clerk-publishable-key>`
+Konfigurera följande i frontend-applikationen:
 
-## Authentication model
-- All protected routes require a Clerk Bearer token in the `Authorization` header.
-- Public health routes do **not** require auth (`/health`, `/health/database`, `/health/storage`, `/health/auth-config`, `/health/redis`, `/cors-test`).
+```bash
+VITE_AUTH_API_URL=https://connect.mediarosenqvist.com
+VITE_ENTRA_CLIENT_ID=<entra-app-client-id>
+VITE_ENTRA_AUTHORITY=<https://<tenant>.ciamlogin.com/<tenant-id> eller motsvarande authority>
+VITE_ENTRA_AUDIENCE=api://a523e8c6-0ef0-42f3-aa97-4b465bf78642
+```
 
-Example:
+## Krav på auth-flöde
+
+Frontend ska:
+
+- använda `@azure/msal-browser`
+- använda **Authorization Code Flow med PKCE**
+- hantera redirect callback på `/auth/callback`
+- visa login/logout-knappar
+- skydda admin-sidor bakom inloggning
+- visa tydligt fel om token saknas eller är ogiltig
+
+## Rekommenderad MSAL-konfiguration
 
 ```ts
-const token = await clerk.session?.getToken();
-await fetch(`${import.meta.env.VITE_API_BASE_URL}/artists`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
+import { PublicClientApplication, type Configuration } from '@azure/msal-browser';
+
+const msalConfig: Configuration = {
+  auth: {
+    clientId: import.meta.env.VITE_ENTRA_CLIENT_ID,
+    authority: import.meta.env.VITE_ENTRA_AUTHORITY,
+    redirectUri: `${window.location.origin}/auth/callback`
   },
-});
+  cache: {
+    cacheLocation: 'sessionStorage'
+  }
+};
+
+export const msalInstance = new PublicClientApplication(msalConfig);
 ```
 
-## CORS validation endpoint
-- `GET /cors-test` returns:
-  - request origin seen by API,
-  - allowed origins list,
-  - allowed methods and required request headers.
+## Scope/resource för access token
 
-Use this to debug browser CORS issues before testing protected endpoints.
+Begär token för API-audience:
 
-## Upload pipeline flow
+```ts
+const tokenRequest = {
+  scopes: [`${import.meta.env.VITE_ENTRA_AUDIENCE}/.default`]
+};
+```
 
-### 1) Initialize upload
-`POST /api/assets/uploads/init`
+> Om er Entra-konfiguration kräver explicita scopes istället för `/.default`, använd de scopes som publicerats på API-appen med audience `api://a523e8c6-0ef0-42f3-aa97-4b465bf78642`.
 
-Request body:
+## Verifiera inloggad användare via Connect
 
-```json
-{
-  "trackId": "uuid",
-  "filename": "demo.wav",
-  "contentType": "audio/wav",
-  "sizeBytes": 1234567
+Anropa skyddad endpoint:
+
+```http
+GET https://connect.mediarosenqvist.com/auth/me
+Authorization: Bearer <access_token>
+```
+
+Förväntat frontend-beteende:
+
+- hämta access token via `acquireTokenSilent` (fallback: redirect/popup enligt appens UX)
+- kalla `${VITE_AUTH_API_URL}/auth/me` med Bearer-token
+- visa användarens namn, e-post och roller i UI
+
+## Exempel: /auth/me-anrop
+
+```ts
+export async function fetchCurrentUser(accessToken: string) {
+  if (!accessToken) {
+    throw new Error('Access token saknas. Logga in igen.');
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_AUTH_API_URL}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Ogiltig eller utgången token. Logga in igen.');
+  }
+
+  return response.json() as Promise<{
+    name?: string;
+    email?: string;
+    roles?: string[];
+  }>;
 }
 ```
 
-Response includes signed `uploadUrl`, `objectKey`, and `assetId`.
+## Skydda admin-sidor
 
-### 2) Upload file directly to R2
-Use `PUT` to the returned `uploadUrl` with the same `Content-Type`.
+- Kräv aktiv session innan admin-routes renderas.
+- Om användaren saknar token eller `/auth/me` returnerar 401/403: redirect till login och visa ett tydligt felmeddelande.
 
-### 3) Complete upload
-`POST /api/assets/uploads/complete`
-
-Request body:
-
-```json
-{
-  "trackId": "uuid",
-  "objectKey": "org/<org-id>/staging/uploads/<track-id>/...",
-  "sizeBytes": 1234567,
-  "mimeType": "audio/wav"
-}
-```
-
-Response includes `jobId` for processing.
-
-### 4) Fetch asset metadata
-`GET /api/assets/:id`
-
-### 5) Fetch short-lived download URL
-`GET /api/assets/:id/download-url`
-
-Response returns `downloadUrl` (5-minute expiry) and associated object key.

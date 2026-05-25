@@ -10,21 +10,11 @@ const schema = z
     DATABASE_URL: z.string().min(1),
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-
-    // Clerk (deprecated/optional) — kept temporarily for migration
-    CLERK_SECRET_KEY: z.string().optional(),
-    CLERK_JWT_ISSUER: z.string().url().optional(),
-    CLERK_JWKS_URL: z.string().url().optional(),
-
-    // Internal auth
-    JWT_SECRET: z.string().min(1),
-    JWT_EXPIRES_IN: z.string().default("15m"),
-    REFRESH_TOKEN_SECRET: z.string().min(1),
-    REFRESH_TOKEN_EXPIRES_IN: z.string().default("7d"),
-    ADMIN_EMAIL: z.string().email().optional(),
-    ADMIN_PASSWORD: z.string().optional(),
-    ADMIN_DISPLAY_NAME: z.string().optional(),
-
+    ENTRA_TENANT_ID: z.string().min(1),
+    ENTRA_ISSUER: z.string().url(),
+    ENTRA_JWKS_URI: z.string().url(),
+    ENTRA_AUDIENCE: z.string().min(1),
+    AUTH_API_URL: z.string().url(),
     STORAGE_PROVIDER: z.enum(["r2", "s3", "azure"]).default("r2"),
     STORAGE_PUBLIC_BASE_URL: z.string().url().optional(),
     R2_ACCOUNT_ID: z.string().optional(),
@@ -50,40 +40,14 @@ const schema = z
   .superRefine((data, ctx) => {
     if (data.STORAGE_PROVIDER === "r2") {
       for (const key of ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"] as const) {
-        if (!data[key]) {
-          ctx.addIssue({ code: "custom", path: [key], message: `${key} is required when STORAGE_PROVIDER=r2` });
-        }
-      }
-    }
-
-    if (data.STORAGE_PROVIDER === "s3") {
-      for (const key of ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_S3_BUCKET"] as const) {
-        if (!data[key]) {
-          ctx.addIssue({ code: "custom", path: [key], message: `${key} is required when STORAGE_PROVIDER=s3` });
-        }
-      }
-    }
-
-    if (data.STORAGE_PROVIDER === "azure") {
-      for (const key of ["AZURE_STORAGE_CONNECTION_STRING", "AZURE_BLOB_CONTAINER"] as const) {
-        if (!data[key]) {
-          ctx.addIssue({ code: "custom", path: [key], message: `${key} is required when STORAGE_PROVIDER=azure` });
-        }
+        if (!data[key]) ctx.addIssue({ code: "custom", path: [key], message: `${key} is required when STORAGE_PROVIDER=r2` });
       }
     }
   });
 
 export const env = schema.parse(process.env);
-
-export const corsOrigins = env.CORS_ORIGINS.split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-
-export function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value || value.trim().length === 0) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
+export const corsOrigins = Array.from(new Set([
+  ...env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
+  "https://connect.mediarosenqvist.com"
+]));
+export function requireEnv(name: string): string { const value = process.env[name]; if (!value || value.trim().length === 0) throw new Error(`Missing required environment variable: ${name}`); return value; }

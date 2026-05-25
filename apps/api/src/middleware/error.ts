@@ -19,7 +19,7 @@ export function registerErrorHandler(app: FastifyInstance) {
       ok: false,
       error: {
         code: (error as any).code ?? 'INTERNAL_ERROR',
-        message: error.message,
+        message: error instanceof Error ? error.message : "Internal server error",
         path: request.url
       }
     });

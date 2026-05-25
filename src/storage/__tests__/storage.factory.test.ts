@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-process.env.CLERK_JWT_ISSUER = process.env.CLERK_JWT_ISSUER ?? "issuer";
-process.env.CLERK_JWKS_URL = process.env.CLERK_JWKS_URL ?? "https://example.com/jwks";
+process.env.ENTRA_ISSUER = process.env.ENTRA_ISSUER ?? "issuer";
+process.env.ENTRA_JWKS_URI = process.env.ENTRA_JWKS_URI ?? "https://example.com/jwks";
+process.env.ENTRA_TENANT_ID = process.env.ENTRA_TENANT_ID ?? "tenant";
+process.env.ENTRA_AUDIENCE = process.env.ENTRA_AUDIENCE ?? "api://aud";
+process.env.AUTH_API_URL = process.env.AUTH_API_URL ?? "https://connect.mediarosenqvist.com";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL ?? "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "key";
 process.env.CORS_ORIGIN = process.env.CORS_ORIGIN ?? "https://example.com";

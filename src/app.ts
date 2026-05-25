@@ -36,6 +36,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith("/health") || req.path === "/cors-test") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+  }
+  next();
+});
+
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
