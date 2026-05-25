@@ -15,6 +15,10 @@ const schema = z
     ENTRA_JWKS_URI: z.string().url(),
     ENTRA_AUDIENCE: z.string().min(1),
     AUTH_API_URL: z.string().url(),
+    CONNECT_ISSUER: z.string().url().optional(),
+    CONNECT_JWKS_URL: z.string().url().optional(),
+    CONNECT_AUDIENCE: z.string().min(1).optional(),
+    CONNECT_REQUIRED: z.coerce.boolean().default(true),
     STORAGE_PROVIDER: z.enum(["r2", "s3", "azure"]).default("r2"),
     STORAGE_PUBLIC_BASE_URL: z.string().url().optional(),
     R2_ACCOUNT_ID: z.string().optional(),
@@ -38,6 +42,12 @@ const schema = z
     CORS_ORIGINS: z.string().min(1),
   })
   .superRefine((data, ctx) => {
+    if (data.CONNECT_REQUIRED) {
+      if (!data.CONNECT_ISSUER) ctx.addIssue({ code: "custom", path: ["CONNECT_ISSUER"], message: "CONNECT_ISSUER is required when CONNECT_REQUIRED=true" });
+      if (!data.CONNECT_JWKS_URL) ctx.addIssue({ code: "custom", path: ["CONNECT_JWKS_URL"], message: "CONNECT_JWKS_URL is required when CONNECT_REQUIRED=true" });
+      if (!data.CONNECT_AUDIENCE) ctx.addIssue({ code: "custom", path: ["CONNECT_AUDIENCE"], message: "CONNECT_AUDIENCE is required when CONNECT_REQUIRED=true" });
+    }
+
     if (data.STORAGE_PROVIDER === "r2") {
       for (const key of ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"] as const) {
         if (!data[key]) ctx.addIssue({ code: "custom", path: [key], message: `${key} is required when STORAGE_PROVIDER=r2` });

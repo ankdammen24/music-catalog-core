@@ -104,8 +104,8 @@ healthRoutes.get("/health/storage", async (_req, res) => {
 });
 
 healthRoutes.get("/health/auth-config", (_req, res) => {
-  const issuerConfigured = Boolean(env.ENTRA_ISSUER);
-  const jwksConfigured = Boolean(env.ENTRA_JWKS_URI);
+  const issuerConfigured = Boolean(env.CONNECT_ISSUER);
+  const jwksConfigured = Boolean(env.CONNECT_JWKS_URL);
   res.json({
     status: issuerConfigured && jwksConfigured ? "ok" : "error",
     dependency: "auth",

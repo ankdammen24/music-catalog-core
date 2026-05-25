@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { requireAuth } from "./auth/requireAuth.js";
+import { authenticateConnectToken } from "./auth/connect.js";
 import { requireOrganizationContext } from "./auth/organization.middleware.js";
 import { corsOrigins } from "./config/env.js";
 import { artistsRoutes } from "./routes/artists.routes.js";
@@ -79,7 +79,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.json());
 app.use(healthRoutes);
 app.use(storagePublicRoutes);
-app.use(requireAuth);
+app.use(authenticateConnectToken);
 app.use(requireOrganizationContext);
 app.use(artistsRoutes);
 app.use(assetsRoutes);
