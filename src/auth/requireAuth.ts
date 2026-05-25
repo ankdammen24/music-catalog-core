@@ -18,14 +18,6 @@ export type RequestAuth = {
   role: UserRole;
 };
 
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: RequestAuth;
-      user?: RequestUser;
-    }
-  }
-}
 
 const roleSchema = new Set<UserRole>(["admin", "label", "artist", "viewer"]);
 
