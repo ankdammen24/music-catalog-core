@@ -18,11 +18,19 @@ export async function buildApp() {
   const app = Fastify({ logger: true });
   await app.register(sensible);
   await app.register(cors, {
-    origin: [env.FRONTEND_ORIGIN, 'https://soundloom.mediarosenqvist.com'],
+    origin: [
+      env.FRONTEND_ORIGIN,
+      'https://soundloom.mediarosenqvist.com',
+      'https://connect.mediarosenqvist.com'
+    ],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
   });
-  app.addHook('preHandler', authMiddleware);
+
+  app.addHook('preHandler', async (request, reply) => {
+    if (request.url.startsWith('/health')) return;
+    await authMiddleware(request, reply);
+  });
   await app.register(healthRoutes);
   await app.register(userRoutes);
   await app.register(artistRoutes);
